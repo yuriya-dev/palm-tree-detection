@@ -1,73 +1,137 @@
-# MOPAD
+# Palm Tree Detection Fullstack Project
 
-These codes and datsets are from the paper "Growing status observation for oil palm tree using Unmanned Aerial Vehicle (UAV) images", which is published in ISPRS Photogrammetry and Remote Sensing.
+Platform fullstack untuk deteksi dan monitoring kondisi pohon sawit berbasis citra UAV.
+Project ini menggabungkan:
 
-## Training
+- Frontend dashboard interaktif (React + Vite)
+- Backend REST API (Golang + Gin)
+- Pipeline machine learning untuk training/inference deteksi pohon
+
+## Arsitektur
+
+### 1. Frontend (client)
+- React 19 + Vite
+- Tailwind CSS
+- Zustand untuk state management
+- Recharts untuk visualisasi
+- Leaflet untuk peta monitoring
+
+Fitur halaman utama:
+- Dashboard overview statistik deteksi
+- Detection (upload citra + konfigurasi threshold/model)
+- Monitoring (map + tabel pohon dengan filter)
+- Datasets management
+- Models management
+- Analytics
+- Settings
+
+### 2. Backend (server)
+- Golang 1.22
+- Gin Web Framework + CORS middleware
+- REST API dengan response format terstandarisasi
+- Data sementara disimpan in-memory (mock runtime)
+
+Endpoint yang tersedia:
+- POST /api/v1/detect
+- GET /api/v1/detections
+- GET /api/v1/detections/:id
+- DELETE /api/v1/detections/:id
+- GET /api/v1/trees
+- GET /api/v1/trees/:id
+- GET /api/v1/trees/stats
+- GET /api/v1/datasets
+- POST /api/v1/datasets
+- DELETE /api/v1/datasets/:id
+- GET /api/v1/models
+- POST /api/v1/models/:id/activate
+- GET /api/v1/models/:id/metrics
+- GET /api/v1/analytics/overview
+- GET /api/v1/analytics/trend
+- GET /api/v1/health
+
+### 3. Machine Learning (ml)
+- Berbasis stack MMDetection yang disesuaikan untuk domain oil palm UAV
+- Konfigurasi utama ada di:
+  - ml/configs/oilPalmUav/mopad.py
+- Script training:
+  - ml/tools/train.py
+- Script inferensi:
+  - ml/demo/demoFull.py
+
+## Catatan Integrasi Saat Ini
+
+- Frontend sudah memiliki service API siap pakai di client/src/services/api.js.
+- Sebagian halaman frontend masih menggunakan mock data/hook simulasi untuk demo UI.
+- Backend API sudah berjalan dan siap diintegrasikan penuh ke setiap halaman frontend.
+
+## Struktur Direktori
+
+```text
+palm-tree-detection/
+|- client/    # Frontend React
+|- server/    # Backend Go (Gin)
+|- ml/        # Pipeline ML (MOPAD-based)
+```
+
+## Cara Menjalankan Project
+
+### Prasyarat
+- Node.js 18+
+- npm
+- Go 1.22+
+- Python 3.8+ (untuk modul ML)
+
+### 1) Jalankan Backend
 
 ```bash
-CUDA_VISIBLE_DEVICES=gpu_id python tools/train.py configs/oilPalmUav/mopad.py
+cd server
+go mod tidy
+go run main.go
 ```
 
+Server default berjalan di:
+- http://localhost:8080
 
-## Inference for the whole image
+### 2) Jalankan Frontend
 
 ```bash
-CUDA_VISIBLE_DEVICES=gpu_id python demo/demoFull.py configs/oilPalmUav/mopad.py work_dirs/mopad/latest.pth mopad-det.txt test_images
+cd client
+npm install
+npm run dev
 ```
 
-## Models
+Frontend default berjalan di:
+- http://localhost:5173
 
-Our training models for Site 2 can be downloaded from
+Opsional environment variable frontend:
 
-[Baidu Wangpan](https://pan.baidu.com/s/1Vj-Se2LUi8839_JjYIh2tQ) Access: 7n61
-
-Our training models for Site 1 can be downloaded from
-
-[Baidu Wangpan](https://pan.baidu.com/s/1asWfKmzViQKDRRZ0BPBOXw) Access: 8mwa
-
-
-## Dataset
-Our dataset for Site 2 can be downloaded from
-
-[Google Drive](https://drive.google.com/drive/folders/17I8HVrGo812vpMdD2EKrkdw_61NVrUfb?usp=sharing)
-
-[Baidu Wangpan](https://pan.baidu.com/s/1JStM5aYCjtZho249PuJ_WQ)  Access: qpaw
-
-Our dataset for Site 1 can be downloaded from
-
-[Baidu Wangpan](https://pan.baidu.com/s/1Eyk1fldzNehEOcd6E9UEsw) Access: fgfv
-
-The data should be saved in the folder `./data`
-
-
-### Details of Dataset
-We followed [COCO](https://cocodataset.org/) format basically.
-
-The structure of the dataset is as follows:
-- `train2017`: images for training dataset (like `<id>.jpg`)
-- `val2017`: images for validation dataset (like `<id>.jpg`)
-- `annotations`: annotations including `instances_train2017.json` and `instances_val2017.json` for training and validation dataset, respectively
-
-
-## Citation
-
-If you use this code for your research, please consider citing:
-
-```
-@article{zheng2021growing,
-  title={Growing status observation for oil palm trees using Unmanned Aerial Vehicle (UAV) images},
-  author={Zheng, Juepeng and Fu, Haohuan and Li, Weijia and Wu, Wenzhao and Yu, Le and Yuan, Shuai and Tao, Wai Yuk William and Pang, Tan Kian and Kanniah, Kasturi Devi},
-  journal={ISPRS Journal of Photogrammetry and Remote Sensing},
-  volume={173},
-  pages={95--121},
-  year={2021},
-  publisher={Elsevier}
-}
+```bash
+VITE_API_URL=http://localhost:8080
 ```
 
-Zheng, J., Fu, H., Li, W., Wu, W., Yu, L., Yuan, S., ... & Kanniah, K. D. (2021). Growing status observation for oil palm trees using Unmanned Aerial Vehicle (UAV) images. ISPRS Journal of Photogrammetry and Remote Sensing, 173, 95-121.
+Jika tidak diset, frontend otomatis memakai http://localhost:8080.
 
-## Contact
+### 3) Jalankan Training ML (opsional)
 
-zjp19@mails.tsinghua.edu.cn
+```bash
+cd ml
+CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/oilPalmUav/mopad.py
+```
+
+### 4) Jalankan Inference ML (opsional)
+
+```bash
+cd ml
+mkdir -p outputs
+CUDA_VISIBLE_DEVICES=0 python demo/demoFull.py configs/oilPalmUav/mopad.py work_dirs/mopad/latest.pth outputs/mopad-det.txt test_images
+```
+
+## Referensi ML
+
+Untuk modul machine learning, project ini mengambil referensi dari:
+
+- https://github.com/rs-dl/MOPAD
+
+Terima kasih kepada penulis/original author MOPAD atas riset dan implementasi dasarnya.
+Jika Anda menggunakan pipeline ML ini untuk kebutuhan riset/publikasi, mohon sertakan sitasi ke paper MOPAD yang relevan.
 
