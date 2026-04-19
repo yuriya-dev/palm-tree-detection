@@ -1,0 +1,91 @@
+# ------------------------------
+# OS / Editor
+# ------------------------------
+.DS_Store
+Thumbs.db
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ------------------------------
+# Logs / Temp
+# ------------------------------
+*.log
+logs/
+tmp/
+temp/
+
+# ------------------------------
+# Python / Jupyter / mmdet
+# ------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+.coverage
+.coverage.*
+htmlcov/
+
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Training / experiment outputs
+work_dirs/
+outputs/
+runs/
+wandb/
+mlruns/
+tensorboard/
+
+# Model weight artifacts
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+
+# ------------------------------
+# Frontend (React + Vite)
+# ------------------------------
+client/node_modules/
+client/dist/
+client/.vite/
+
+client/.env
+client/.env.local
+client/.env.development.local
+client/.env.test.local
+client/.env.production.local
+client/.env.*.local
+!client/.env.example
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------
+# Backend (Go)
+# ------------------------------
+server/bin/
+server/tmp/
+server/coverage.out
+server/*.test
+
+ml/

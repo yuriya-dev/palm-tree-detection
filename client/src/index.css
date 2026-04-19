@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #1a7a4a;
+  --color-primary-light: #22c55e;
+  --color-primary-subtle: #f0fdf4;
+  --color-primary-muted: #dcfce7;
+
+  --color-surface: #ffffff;
+  --color-surface-2: #f8fafc;
+  --color-surface-3: #f1f5f9;
+  --color-border: rgba(15, 23, 42, 0.06);
+  --color-border-medium: rgba(15, 23, 42, 0.12);
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 20px 40px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.12);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+}
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+
+  body {
+    @apply min-h-screen bg-slate-50 font-sans text-slate-900 antialiased;
+    background-image:
+      radial-gradient(circle at 8% 0%, rgba(34, 197, 94, 0.1), transparent 28%),
+      radial-gradient(circle at 86% 100%, rgba(14, 116, 144, 0.08), transparent 30%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-slate-900;
+  }
+}
+
+@layer components {
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 20px 40px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .sidebar {
+    background: white;
+    border-right: 1px solid rgba(15, 23, 42, 0.06);
+    width: 240px;
+  }
+
+  .nav-item-active {
+    background: #f0fdf4;
+    color: #1a7a4a;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .btn-primary {
+    @apply rounded-button bg-gradient-to-r from-primary-900 to-primary-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-px hover:shadow-md;
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(110deg, #edf2f7 8%, #f8fafc 18%, #edf2f7 33%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+}
+
+#root {
+  min-height: 100vh;
+}
