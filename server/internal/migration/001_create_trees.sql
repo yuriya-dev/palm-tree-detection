@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS trees (
+    id TEXT PRIMARY KEY,
+    site TEXT NOT NULL,
+    lat DOUBLE PRECISION NOT NULL,
+    lng DOUBLE PRECISION NOT NULL,
+    status TEXT NOT NULL,
+    confidence DOUBLE PRECISION NOT NULL,
+    detected_at DATE NOT NULL
+);

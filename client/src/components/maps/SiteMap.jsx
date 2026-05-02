@@ -16,7 +16,7 @@ export default function SiteMap({
     <MapContainer
       center={center}
       zoom={zoom}
-      className="h-full w-full rounded-card"
+      className="relative z-0 h-full w-full rounded-card"
       style={{ height: `${height}px`, width: '100%' }}
       scrollWheelZoom={interactive}
       dragging={interactive}

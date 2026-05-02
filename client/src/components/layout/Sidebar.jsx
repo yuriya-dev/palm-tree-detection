@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <Leaf size={16} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">MOPAD</p>
+            <p className="text-sm font-semibold text-slate-900">NYAWIT</p>
             <p className="text-xs text-slate-500">Oil Palm Intelligence</p>
           </div>
         </div>

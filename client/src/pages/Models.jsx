@@ -1,5 +1,5 @@
 import { Download, LineChart as LineChartIcon, PlayCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Legend,
@@ -14,19 +14,139 @@ import EmptyState from '../components/shared/EmptyState'
 import Skeleton from '../components/shared/Skeleton'
 import Button from '../components/ui/Button'
 import StatusBadge from '../components/ui/StatusBadge'
-import {
-  modelPerformanceTrend,
-  models,
-  trainingHistory,
-} from '../utils/mockData'
+import { apiEndpoints } from '../services/api'
+
+const chartColors = ['#1a7a4a', '#0284c7', '#d97706']
+
+const mapModel = (model) => ({
+  id: model.id,
+  name: model.name,
+  site: model.site,
+  accuracy: Number(model.accuracy || 0),
+  map: Number(model.map || 0),
+  status: model.status,
+})
+
+const formatPercent = (value) => {
+  const normalized = Number(value || 0)
+  if (normalized <= 1) {
+    return `${(normalized * 100).toFixed(1)}%`
+  }
+
+  return `${normalized.toFixed(1)}%`
+}
+
+const formatMAP = (value) => Number(value || 0).toFixed(2)
 
 export default function Models() {
+  const [models, setModels] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [activatingID, setActivatingID] = useState('')
+  const [metricsByModel, setMetricsByModel] = useState({})
+
+  const loadModels = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await apiEndpoints.listModels()
+      const payload = Array.isArray(response?.data) ? response.data : []
+      const mappedModels = payload.map(mapModel)
+
+      setModels(mappedModels)
+
+      const metricEntries = await Promise.all(
+        mappedModels.map(async (model) => {
+          try {
+            const metricsResponse = await apiEndpoints.getModelMetrics(model.id)
+            return [model.id, metricsResponse?.data || null]
+          } catch {
+            return [model.id, null]
+          }
+        }),
+      )
+
+      setMetricsByModel(Object.fromEntries(metricEntries))
+    } catch (fetchError) {
+      setModels([])
+      setMetricsByModel({})
+      setError(fetchError)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 650)
-    return () => clearTimeout(timer)
-  }, [])
+    loadModels()
+  }, [loadModels])
+
+  const modelSeries = useMemo(
+    () =>
+      models.slice(0, 3).map((model, index) => ({
+        id: model.id,
+        name: model.site || model.name,
+        key: `model${index + 1}`,
+        color: chartColors[index % chartColors.length],
+      })),
+    [models],
+  )
+
+  const modelPerformanceTrend = useMemo(() => {
+    const maxEpoch = Math.max(
+      1,
+      ...modelSeries.map((series) => {
+        const metrics = metricsByModel[series.id]
+        return Array.isArray(metrics?.precision) ? metrics.precision.length : 0
+      }),
+    )
+
+    return Array.from({ length: maxEpoch }, (_, epochIndex) => {
+      const row = { epoch: `E${epochIndex + 1}` }
+
+      modelSeries.forEach((series) => {
+        const metrics = metricsByModel[series.id]
+        const fallback = Number(models.find((item) => item.id === series.id)?.map || 0)
+        const precision = Array.isArray(metrics?.precision) ? metrics.precision[epochIndex] : undefined
+        row[series.key] = Number(precision ?? fallback)
+      })
+
+      return row
+    })
+  }, [metricsByModel, modelSeries, models])
+
+  const trainingHistory = useMemo(
+    () =>
+      models.map((model) => ({
+        id: model.id,
+        title: `${model.name} (${model.site})`,
+        time: model.status,
+        detail: `Accuracy ${formatPercent(model.accuracy)} | mAP ${formatMAP(model.map)}`,
+      })),
+    [models],
+  )
+
+  const bestModel = useMemo(() => {
+    if (models.length === 0) {
+      return null
+    }
+
+    return [...models].sort((a, b) => b.map - a.map)[0]
+  }, [models])
+
+  const handleActivate = async (id) => {
+    setActivatingID(id)
+    setError(null)
+
+    try {
+      await apiEndpoints.activateModel(id)
+      await loadModels()
+    } catch (activateError) {
+      setError(activateError)
+    } finally {
+      setActivatingID('')
+    }
+  }
 
   if (loading) {
     return (
@@ -34,6 +154,17 @@ export default function Models() {
         <Skeleton className="h-[620px]" />
         <Skeleton className="h-[620px]" />
       </div>
+    )
+  }
+
+  if (error && models.length === 0) {
+    return (
+      <EmptyState
+        title="Gagal memuat model"
+        description={error?.message || 'Pastikan backend API sedang berjalan lalu coba lagi.'}
+        actionLabel="Muat Ulang"
+        onAction={loadModels}
+      />
     )
   }
 
@@ -64,24 +195,29 @@ export default function Models() {
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-lg bg-slate-50 p-3">
                   <p className="text-slate-500">Accuracy</p>
-                  <p className="font-semibold text-slate-800">{model.accuracy}%</p>
+                  <p className="font-semibold text-slate-800">{formatPercent(model.accuracy)}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-3">
                   <p className="text-slate-500">mAP</p>
-                  <p className="font-semibold text-slate-800">{model.map}</p>
+                  <p className="font-semibold text-slate-800">{formatMAP(model.map)}</p>
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleActivate(model.id)}
+                  disabled={model.status?.toLowerCase() === 'active' || activatingID === model.id}
+                >
                   <PlayCircle size={14} />
-                  Set Active
+                  {activatingID === model.id ? 'Updating...' : 'Set Active'}
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" disabled>
                   <Download size={14} />
                   Download
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" disabled>
                   View Metrics
                 </Button>
               </div>
@@ -129,17 +265,29 @@ export default function Models() {
                 }}
               />
               <Legend />
-              <Line type="monotone" dataKey="site1" name="Site 1" stroke="#1a7a4a" strokeWidth={2.5} dot={false} />
-              <Line type="monotone" dataKey="site2" name="Site 2" stroke="#0284c7" strokeWidth={2.5} dot={false} />
-              <Line type="monotone" dataKey="global" name="Global" stroke="#d97706" strokeWidth={2.5} dot={false} />
+              {modelSeries.map((series) => (
+                <Line
+                  key={series.id}
+                  type="monotone"
+                  dataKey={series.key}
+                  name={series.name}
+                  stroke={series.color}
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
           <LineChartIcon size={16} className="text-primary-900" />
-          Site 1 saat ini memimpin performa dengan mAP 0.78.
+          {bestModel
+            ? `${bestModel.site} saat ini memimpin performa dengan mAP ${formatMAP(bestModel.map)}.`
+            : 'Belum ada data performa model.'}
         </div>
+
+        {error && <p className="mt-3 text-xs text-rose-600">{error.message || 'Operasi model gagal diproses.'}</p>}
       </section>
     </div>
   )

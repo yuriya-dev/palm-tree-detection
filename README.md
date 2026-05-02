@@ -28,8 +28,9 @@ Fitur halaman utama:
 ### 2. Backend (server)
 - Golang 1.22
 - Gin Web Framework + CORS middleware
+- PostgreSQL untuk penyimpanan data
 - REST API dengan response format terstandarisasi
-- Data sementara disimpan in-memory (mock runtime)
+- Auto migration tabel saat server startup
 
 Endpoint yang tersedia:
 - POST /api/v1/detect
@@ -60,9 +61,9 @@ Endpoint yang tersedia:
 
 ## Catatan Integrasi Saat Ini
 
-- Frontend sudah memiliki service API siap pakai di client/src/services/api.js.
-- Sebagian halaman frontend masih menggunakan mock data/hook simulasi untuk demo UI.
-- Backend API sudah berjalan dan siap diintegrasikan penuh ke setiap halaman frontend.
+- Frontend detection sudah terhubung ke endpoint backend POST /api/v1/detect.
+- Backend detection terhubung ke Python ML service (FastAPI) via ML_SERVICE_URL.
+- Jika Python ML service tidak aktif, backend akan fallback ke prediksi heuristik agar API tetap berjalan.
 
 ## Struktur Direktori
 
@@ -79,20 +80,54 @@ palm-tree-detection/
 - Node.js 18+
 - npm
 - Go 1.22+
+- PostgreSQL 14+
 - Python 3.8+ (untuk modul ML)
 
-### 1) Jalankan Backend
+### 1) Setup PostgreSQL
+
+Gunakan kredensial default:
+
+- user: postgres
+- password: postgres
+
+Konfigurasi koneksi backend (opsional, karena sudah punya default yang sama):
+
+```bash
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_USER=postgres
+export DB_PASSWORD=postgres
+export DB_NAME=postgres
+export DB_SSLMODE=disable
+export ML_SERVICE_URL=http://localhost:8000
+```
+
+### 2) Jalankan Python ML Service
+
+```bash
+cd ml/serving
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+Service default berjalan di:
+- http://localhost:8000
+
+### 3) Jalankan Backend
 
 ```bash
 cd server
 go mod tidy
-go run main.go
+go run ./cmd/migrate
+go run ./cmd/api
 ```
 
 Server default berjalan di:
 - http://localhost:8080
 
-### 2) Jalankan Frontend
+### 4) Jalankan Frontend
 
 ```bash
 cd client
@@ -111,14 +146,14 @@ VITE_API_URL=http://localhost:8080
 
 Jika tidak diset, frontend otomatis memakai http://localhost:8080.
 
-### 3) Jalankan Training ML (opsional)
+### 5) Jalankan Training ML (opsional)
 
 ```bash
 cd ml
 CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/oilPalmUav/mopad.py
 ```
 
-### 4) Jalankan Inference ML (opsional)
+### 6) Jalankan Inference ML (opsional)
 
 ```bash
 cd ml

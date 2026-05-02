@@ -1,5 +1,5 @@
 import { Download, FileSpreadsheet } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -14,12 +14,7 @@ import EmptyState from '../components/shared/EmptyState'
 import Skeleton, { StatGridSkeleton } from '../components/shared/Skeleton'
 import Button from '../components/ui/Button'
 import StatCard from '../components/ui/StatCard'
-import {
-  analyticsKpis,
-  heatmapActivity,
-  siteComparison,
-  weeklyTrend,
-} from '../utils/mockData'
+import { apiEndpoints } from '../services/api'
 
 const intensityClass = (value) => {
   if (value <= 2) return 'bg-emerald-50'
@@ -31,13 +26,134 @@ const intensityClass = (value) => {
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [startDate, setStartDate] = useState('2026-04-01')
   const [endDate, setEndDate] = useState('2026-04-19')
+  const [overview, setOverview] = useState(null)
+  const [weeklyTrend, setWeeklyTrend] = useState([])
+  const [siteComparison, setSiteComparison] = useState([])
+
+  const fetchAnalytics = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const [overviewResponse, trendResponse, treesResponse] = await Promise.all([
+        apiEndpoints.analyticsOverview({ startDate, endDate }),
+        apiEndpoints.analyticsTrend({ period: 'weekly' }),
+        apiEndpoints.listTrees({ page: 1, limit: 200 }),
+      ])
+
+      const trendPoints = Array.isArray(trendResponse?.data?.points)
+        ? trendResponse.data.points
+        : []
+
+      setOverview(overviewResponse?.data || null)
+      setWeeklyTrend(
+        trendPoints.map((point) => ({
+          week: point.label,
+          detections: Number(point.value || 0),
+        })),
+      )
+
+      const trees = Array.isArray(treesResponse?.data) ? treesResponse.data : []
+      const siteMap = trees.reduce((acc, tree) => {
+        const siteKey = tree.site || 'Unknown'
+        acc[siteKey] = (acc[siteKey] || 0) + 1
+        return acc
+      }, {})
+
+      setSiteComparison(
+        Object.entries(siteMap).map(([site, treesCount]) => ({
+          site,
+          trees: treesCount,
+        })),
+      )
+    } catch (fetchError) {
+      setOverview(null)
+      setWeeklyTrend([])
+      setSiteComparison([])
+      setError(fetchError)
+    } finally {
+      setLoading(false)
+    }
+  }, [endDate, startDate])
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 750)
+    const timer = setTimeout(() => {
+      fetchAnalytics()
+    }, 300)
+
     return () => clearTimeout(timer)
-  }, [])
+  }, [fetchAnalytics])
+
+  const heatmapActivity = useMemo(() => {
+    if (weeklyTrend.length === 0) {
+      return []
+    }
+
+    return Array.from({ length: 28 }, (_, index) => {
+      const trendPoint = weeklyTrend[index % weeklyTrend.length]
+      const scaledValue = Math.max(1, Math.round(Number(trendPoint?.detections || 0) / 24))
+
+      return {
+        day: index + 1,
+        value: scaledValue,
+      }
+    })
+  }, [weeklyTrend])
+
+  const trendDelta = useMemo(() => {
+    if (weeklyTrend.length < 2) {
+      return 0
+    }
+
+    const first = Number(weeklyTrend[0]?.detections || 0)
+    const last = Number(weeklyTrend[weeklyTrend.length - 1]?.detections || 0)
+    if (first === 0) {
+      return 0
+    }
+
+    return Math.round(((last - first) / first) * 100)
+  }, [weeklyTrend])
+
+  const analyticsKpis = useMemo(() => {
+    const totalTrees = Number(overview?.total_trees_detected || 0)
+    const healthyTrees = Number(overview?.healthy_trees || 0)
+    const warningTrees = Number(overview?.trees_needing_attention || 0)
+    const areaCoverage = Number(overview?.area_coverage_ha || 0)
+
+    return [
+      {
+        key: 'total',
+        title: 'Total Trees',
+        value: totalTrees,
+        trend: trendDelta,
+        icon: 'trees',
+      },
+      {
+        key: 'healthy',
+        title: 'Healthy Trees',
+        value: healthyTrees,
+        trend: totalTrees ? Math.round((healthyTrees / totalTrees) * 100) : 0,
+        icon: 'shield',
+      },
+      {
+        key: 'attention',
+        title: 'Need Attention',
+        value: warningTrees,
+        trend: totalTrees ? -Math.round((warningTrees / totalTrees) * 100) : 0,
+        icon: 'alert',
+      },
+      {
+        key: 'coverage',
+        title: 'Area Coverage (ha)',
+        value: areaCoverage.toFixed(1),
+        trend: 0,
+        icon: 'map',
+      },
+    ]
+  }, [overview, trendDelta])
 
   if (loading) {
     return (
@@ -50,6 +166,17 @@ export default function Analytics() {
         </div>
         <Skeleton className="h-64" />
       </div>
+    )
+  }
+
+  if (error && weeklyTrend.length === 0) {
+    return (
+      <EmptyState
+        title="Gagal memuat analytics"
+        description={error?.message || 'Pastikan backend API sedang berjalan lalu coba lagi.'}
+        actionLabel="Muat Ulang"
+        onAction={fetchAnalytics}
+      />
     )
   }
 
@@ -154,6 +281,8 @@ export default function Analytics() {
             />
           ))}
         </div>
+
+        {error && <p className="mt-4 text-xs text-rose-600">{error.message || 'Sebagian data analytics gagal dimuat.'}</p>}
       </section>
     </div>
   )

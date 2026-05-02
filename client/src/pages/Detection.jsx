@@ -44,7 +44,12 @@ export default function Detection() {
     }
 
     await startUploadSimulation()
-    await runDetection(previewUrl)
+    try {
+      await runDetection({ file, imageUrl: previewUrl })
+    } catch (error) {
+      console.error(error)
+      window.alert(error.message || 'Detection request failed')
+    }
   }
 
   const handleReset = () => {

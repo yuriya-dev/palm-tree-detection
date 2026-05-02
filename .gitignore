@@ -88,5 +88,5 @@ server/tmp/
 server/coverage.out
 server/*.test
 
-ml/
+dataset/
 AI_Summary/

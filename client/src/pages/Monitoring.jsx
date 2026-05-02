@@ -14,7 +14,7 @@ const defaultFilters = {
 
 export default function Monitoring() {
   const [filters, setFilters] = useState(defaultFilters)
-  const { trees, loading, isEmpty } = useTrees(filters)
+  const { trees, loading, error, isEmpty } = useTrees(filters)
 
   return (
     <div className="space-y-6">
@@ -73,6 +73,11 @@ export default function Monitoring() {
           <Skeleton className="h-[460px]" />
           <TableSkeleton rows={8} />
         </div>
+      ) : error ? (
+        <EmptyState
+          title="Gagal mengambil data pohon"
+          description={error?.message || 'Pastikan backend API sedang berjalan, lalu coba lagi.'}
+        />
       ) : isEmpty ? (
         <EmptyState
           title="Data pohon tidak ditemukan"

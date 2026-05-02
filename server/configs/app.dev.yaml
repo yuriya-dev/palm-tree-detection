@@ -1,0 +1,15 @@
+server:
+  port: 8080
+  cors_allowed_origins:
+    - http://localhost:5173
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  name: postgres
+  sslmode: disable
+
+ml:
+  service_url: http://localhost:8000

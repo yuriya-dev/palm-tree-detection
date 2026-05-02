@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS models (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    site TEXT NOT NULL,
+    accuracy DOUBLE PRECISION NOT NULL,
+    m_ap DOUBLE PRECISION NOT NULL,
+    status TEXT NOT NULL
+);
