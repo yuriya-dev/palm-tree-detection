@@ -56,7 +56,7 @@ export default function DetectionResult({ result }) {
               }}
             >
               <span className="absolute -top-6 left-0 rounded bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                {item.id}
+                {item.label || item.id}
               </span>
             </div>
           ))}
@@ -68,6 +68,9 @@ export default function DetectionResult({ result }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Detection Count</p>
           <p className="mt-2 font-display text-4xl text-primary-900">{result.count}</p>
           <p className="mt-1 text-xs text-slate-500">Model: {result.selectedModel}</p>
+          {result.prediction?.source ? (
+            <p className="mt-1 text-xs text-slate-500">Inference source: {result.prediction.source}</p>
+          ) : null}
         </div>
 
         <div className="card p-5">
@@ -82,7 +85,8 @@ export default function DetectionResult({ result }) {
           {result.detections.map((item) => (
             <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
               <div>
-                <p className="text-sm font-semibold text-slate-700">{item.id}</p>
+                <p className="text-sm font-semibold text-slate-700">{item.label || item.id}</p>
+                <p className="text-xs text-slate-500">{item.id}</p>
                 <p className="text-xs text-slate-500">Confidence: {(item.confidence * 100).toFixed(1)}%</p>
               </div>
               <StatusBadge status={item.status} />

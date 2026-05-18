@@ -50,14 +50,11 @@ Endpoint yang tersedia:
 - GET /api/v1/analytics/trend
 - GET /api/v1/health
 
-### 3. Machine Learning (ml)
-- Berbasis stack MMDetection yang disesuaikan untuk domain oil palm UAV
-- Konfigurasi utama ada di:
-  - ml/configs/oilPalmUav/mopad.py
-- Script training:
-  - ml/tools/train.py
-- Script inferensi:
-  - ml/demo/demoFull.py
+### 3. Machine Learning (ml-service)
+- Service inferensi FastAPI yang membaca weight hasil training dari notebook
+- Weight model dapat ditaruh di:
+  - ml-service/models/best.pt
+- Jika weight tidak tersedia, service tetap berjalan dengan fallback heuristik
 
 ## Catatan Integrasi Saat Ini
 
@@ -71,7 +68,8 @@ Endpoint yang tersedia:
 palm-tree-detection/
 |- client/    # Frontend React
 |- server/    # Backend Go (Gin)
-|- ml/        # Pipeline ML (MOPAD-based)
+|- ml-service/ # Service inferensi ML (FastAPI + YOLO)
+|- notebook/   # Notebook training dan dataset
 ```
 
 ## Cara Menjalankan Project
@@ -105,15 +103,17 @@ export ML_SERVICE_URL=http://localhost:8000
 ### 2) Jalankan Python ML Service
 
 ```bash
-cd ml/serving
+cd ml-service
 python -m venv .venv
-source .venv/bin/activate
+.venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
 Service default berjalan di:
 - http://localhost:8000
+
+Jika Anda punya weight hasil training dari notebook, simpan ke `ml-service/models/best.pt` lalu set `MODEL_PATH` ke file tersebut.
 
 ### 3) Jalankan Backend
 
@@ -149,16 +149,16 @@ Jika tidak diset, frontend otomatis memakai http://localhost:8080.
 ### 5) Jalankan Training ML (opsional)
 
 ```bash
-cd ml
-CUDA_VISIBLE_DEVICES=0 python tools/train.py configs/oilPalmUav/mopad.py
+cd notebook
+# buka dan jalankan palmtree_detection.ipynb untuk training / export model
 ```
 
 ### 6) Jalankan Inference ML (opsional)
 
 ```bash
-cd ml
-mkdir -p outputs
-CUDA_VISIBLE_DEVICES=0 python demo/demoFull.py configs/oilPalmUav/mopad.py work_dirs/mopad/latest.pth outputs/mopad-det.txt test_images
+cd ml-service
+set MODEL_PATH=D:\path\to\best.pt
+uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
 ## Referensi ML

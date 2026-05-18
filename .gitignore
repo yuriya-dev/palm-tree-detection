@@ -90,3 +90,5 @@ server/*.test
 
 dataset/
 AI_Summary/
+
+models/best.pt

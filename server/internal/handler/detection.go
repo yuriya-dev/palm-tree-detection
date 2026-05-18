@@ -41,7 +41,7 @@ func (h *Handler) Detect(c *gin.Context) {
 		}
 	}
 
-	detection, err := h.detectionService.RunDetection(c.Request.Context(), service.DetectionRequest{
+	result, err := h.detectionService.RunDetection(c.Request.Context(), service.DetectionRequest{
 		ImageName:           file.Filename,
 		Site:                site,
 		Model:               model,
@@ -53,7 +53,10 @@ func (h *Handler) Detect(c *gin.Context) {
 		return
 	}
 
-	respond(c, http.StatusOK, detection, "Detection completed", nil)
+	respond(c, http.StatusOK, gin.H{
+		"detection":  result.Detection,
+		"prediction": result.Prediction,
+	}, "Detection completed", nil)
 }
 
 func (h *Handler) ListDetections(c *gin.Context) {

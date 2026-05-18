@@ -18,6 +18,11 @@ type DetectionRequest struct {
 	ImageBytes          []byte
 }
 
+type DetectionOutcome struct {
+	Detection  domain.Detection
+	Prediction port.MLPrediction
+}
+
 type DetectionService struct {
 	repo     port.Repository
 	mlRunner port.MLRunner
@@ -27,7 +32,7 @@ func NewDetectionService(repo port.Repository, mlRunner port.MLRunner) *Detectio
 	return &DetectionService{repo: repo, mlRunner: mlRunner}
 }
 
-func (s *DetectionService) RunDetection(ctx context.Context, req DetectionRequest) (domain.Detection, error) {
+func (s *DetectionService) RunDetection(ctx context.Context, req DetectionRequest) (DetectionOutcome, error) {
 	site := strings.TrimSpace(req.Site)
 	if site == "" {
 		site = "Site 1"
@@ -35,15 +40,16 @@ func (s *DetectionService) RunDetection(ctx context.Context, req DetectionReques
 
 	detectionCount, err := s.repo.Count(ctx, "detections")
 	if err != nil {
-		return domain.Detection{}, err
+		return DetectionOutcome{}, err
 	}
 
 	statusOptions := []string{"Healthy", "Warning", "Critical"}
 	status := statusOptions[detectionCount%len(statusOptions)]
 	confidence := 0.82 + float64(detectionCount%8)*0.02
+	var prediction port.MLPrediction
 
 	if s.mlRunner != nil && len(req.ImageBytes) > 0 {
-		prediction, predictErr := s.mlRunner.Predict(ctx, port.MLPredictRequest{
+		prediction, _ = s.mlRunner.Predict(ctx, port.MLPredictRequest{
 			ImageName:           req.ImageName,
 			ImageBytes:          req.ImageBytes,
 			Site:                site,
@@ -51,20 +57,23 @@ func (s *DetectionService) RunDetection(ctx context.Context, req DetectionReques
 			ConfidenceThreshold: req.ConfidenceThreshold,
 		})
 
-		if predictErr == nil {
-			if normalizedStatus := normalizeStatus(prediction.Status); normalizedStatus != "" {
-				status = normalizedStatus
-			}
-
-			if prediction.Confidence > 0 {
-				confidence = clampConfidence(prediction.Confidence)
-			}
+		if normalizedStatus := normalizeStatus(prediction.Status); normalizedStatus != "" {
+			status = normalizedStatus
 		}
+
+		if prediction.Confidence > 0 {
+			confidence = clampConfidence(prediction.Confidence)
+		}
+
+		prediction.ImageName = req.ImageName
+		prediction.Site = site
+		prediction.ConfidenceThreshold = req.ConfidenceThreshold
+		prediction.Model = req.Model
 	}
 
 	maxTreeID, err := s.repo.MaxIDNumber(ctx, "trees", "TREE-", 99)
 	if err != nil {
-		return domain.Detection{}, err
+		return DetectionOutcome{}, err
 	}
 
 	treeID := fmt.Sprintf("TREE-%04d", maxTreeID+1)
@@ -92,10 +101,10 @@ func (s *DetectionService) RunDetection(ctx context.Context, req DetectionReques
 	}
 
 	if err := s.repo.CreateDetectionAndTree(ctx, detection, tree); err != nil {
-		return domain.Detection{}, err
+		return DetectionOutcome{}, err
 	}
 
-	return detection, nil
+	return DetectionOutcome{Detection: detection, Prediction: prediction}, nil
 }
 
 func normalizeStatus(status string) string {
