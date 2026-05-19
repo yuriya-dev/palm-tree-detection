@@ -25,6 +25,71 @@ export default function DetectionResult({ result, onApprove, onReject, isReviewi
   const showReviewActions = Boolean(onApprove || onReject)
   const isApproved = reviewDecision === 'approved'
 
+  const handleDownload = () => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      
+      // Draw base image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      
+      // Draw detections
+      const colorMap = {
+        Healthy: '#10b981',
+        Warning: '#f59e0b',
+        Critical: '#f43f5e',
+      }
+      const fallbackColor = '#06b6d4'
+      
+      result.detections.forEach((item) => {
+        const x = (item.x / 100) * canvas.width
+        const y = (item.y / 100) * canvas.height
+        const w = (item.width / 100) * canvas.width
+        const h = (item.height / 100) * canvas.height
+        
+        ctx.strokeStyle = colorMap[item.status] || fallbackColor
+        ctx.lineWidth = Math.max(2, canvas.width * 0.003)
+        ctx.strokeRect(x, y, w, h)
+        
+        const label = item.label || item.id
+        if (label) {
+          const fontSize = Math.max(14, canvas.width * 0.015)
+          ctx.font = `600 ${fontSize}px sans-serif`
+          ctx.textBaseline = 'top'
+          
+          const textStr = String(label)
+          const textMetrics = ctx.measureText(textStr)
+          const textWidth = textMetrics.width
+          const padding = fontSize * 0.4
+          
+          const bgWidth = textWidth + padding * 2
+          const bgHeight = fontSize + padding * 2
+          const bgX = x
+          const bgY = Math.max(0, y - bgHeight)
+          
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'
+          ctx.fillRect(bgX, bgY, bgWidth, bgHeight)
+          
+          ctx.fillStyle = '#ffffff'
+          ctx.fillText(textStr, bgX + padding, bgY + padding)
+        }
+      })
+      
+      // Trigger download
+      const link = document.createElement('a')
+      link.download = `mopad-detection-result-${new Date().getTime()}.jpg`
+      link.href = canvas.toDataURL('image/jpeg', 0.9)
+      link.click()
+    }
+    
+    img.src = result.imageUrl
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
             <div className="card p-5">
@@ -46,9 +111,7 @@ export default function DetectionResult({ result, onApprove, onReject, isReviewi
           </div>
           {!isPending && (
             <Button
-              as="a"
-              href={result.imageUrl}
-              download="mopad-detection-result.jpg"
+              onClick={handleDownload}
               variant="secondary"
               size="sm"
             >
@@ -132,7 +195,7 @@ export default function DetectionResult({ result, onApprove, onReject, isReviewi
           </div>
         </div>
 
-        <div className="card space-y-3 p-5">
+        <div className="max-h-[600px] overflow-y-scroll card space-y-3 p-5">
           <h4 className="text-sm font-semibold text-slate-800">Tree Status List</h4>
           {result.detections.map((item) => (
             <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
