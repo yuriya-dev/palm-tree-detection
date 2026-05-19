@@ -66,6 +66,7 @@ tensorboard/
 client/node_modules/
 client/dist/
 client/.vite/
+client/public/tiles/
 
 client/.env
 client/.env.local
@@ -87,6 +88,7 @@ server/bin/
 server/tmp/
 server/coverage.out
 server/*.test
+server/uploads/pending/
 
 dataset/
 AI_Summary/

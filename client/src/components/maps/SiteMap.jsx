@@ -23,7 +23,16 @@ export default function SiteMap({
       zoomControl={interactive}
       attributionControl={false}
     >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <TileLayer 
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+        attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+      />
+      <TileLayer 
+        url="/tiles/{z}/{x}/{y}.png" 
+        attribution="&copy; UAV Simulation"
+        maxZoom={18}
+        minZoom={12}
+      />
       {markers.map((marker) => (
         <TreeMarker key={marker.id} tree={marker} />
       ))}

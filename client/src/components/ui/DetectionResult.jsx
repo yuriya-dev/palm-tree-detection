@@ -1,8 +1,9 @@
-import { DownloadCloud } from 'lucide-react'
+import { DownloadCloud, CheckCircle, XCircle, Clock } from 'lucide-react'
 import DonutChart from '../charts/DonutChart'
 import EmptyState from '../shared/EmptyState'
 import Button from './Button'
 import StatusBadge from './StatusBadge'
+import Badge from './Badge'
 
 const boxColor = {
   Healthy: 'border-emerald-500',
@@ -10,7 +11,7 @@ const boxColor = {
   Critical: 'border-rose-500',
 }
 
-export default function DetectionResult({ result }) {
+export default function DetectionResult({ result, onApprove, onReject, isReviewing, reviewDecision }) {
   if (!result) {
     return (
       <EmptyState
@@ -20,28 +21,79 @@ export default function DetectionResult({ result }) {
     )
   }
 
+  const isPending = result.status === 'pending'
+  const showReviewActions = Boolean(onApprove || onReject)
+  const isApproved = reviewDecision === 'approved'
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-      <div className="card p-5">
+            <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-display text-2xl text-slate-900">Detection Overlay</h3>
-          <Button
-            as="a"
-            href={result.imageUrl}
-            download="mopad-detection-result.jpg"
-            variant="secondary"
-            size="sm"
-          >
-            <DownloadCloud size={14} />
-            Download Result
-          </Button>
+          <div className="flex items-center gap-3">
+            <h3 className="font-display text-2xl text-slate-900">Detection Overlay</h3>
+            {isPending && (
+              <Badge color="yellow">
+                <Clock size={12} />
+                Pending Approval
+              </Badge>
+            )}
+            {isApproved && (
+              <Badge variant="success">
+                <CheckCircle size={12} />
+                Approved
+              </Badge>
+            )}
+          </div>
+          {!isPending && (
+            <Button
+              as="a"
+              href={result.imageUrl}
+              download="mopad-detection-result.jpg"
+              variant="secondary"
+              size="sm"
+            >
+              <DownloadCloud size={14} />
+              Download Result
+            </Button>
+          )}
         </div>
+
+        {showReviewActions && (
+          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-medium text-slate-900">
+              Review the detected trees after the boxes are shown.
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              Approve if the detection looks correct, or reject if there are missed or incorrect trees.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onApprove}
+                disabled={isReviewing || isApproved}
+              >
+                <CheckCircle size={16} />
+                {isReviewing ? 'Processing...' : isApproved ? 'Approved' : 'Approve Result'}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={onReject}
+                disabled={isReviewing || isApproved}
+              >
+                <XCircle size={16} />
+                Reject Result
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
           <img
             src={result.imageUrl}
             alt="Detection result"
-            className="h-[360px] w-full object-cover"
+            className="h-full w-full object-cover"
           />
 
           {result.detections.map((item) => (

@@ -188,13 +188,38 @@ func (r *PostgresRepository) GetDetectionByID(ctx context.Context, id string) (d
 }
 
 func (r *PostgresRepository) DeleteDetectionByID(ctx context.Context, id string) (bool, error) {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM detections WHERE id = $1`, id)
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
+		return false, err
+	}
+
+	var treeID string
+	if err := tx.QueryRowContext(ctx, `SELECT tree_id FROM detections WHERE id = $1`, id).Scan(&treeID); err != nil {
+		_ = tx.Rollback()
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM trees WHERE id = $1`, treeID); err != nil {
+		_ = tx.Rollback()
+		return false, err
+	}
+
+	result, err := tx.ExecContext(ctx, `DELETE FROM detections WHERE id = $1`, id)
+	if err != nil {
+		_ = tx.Rollback()
 		return false, err
 	}
 
 	affectedRows, err := result.RowsAffected()
 	if err != nil {
+		_ = tx.Rollback()
+		return false, err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return false, err
 	}
 
@@ -506,6 +531,194 @@ func (r *PostgresRepository) GetModelByID(ctx context.Context, id string) (domai
 	}
 
 	return model, nil
+}
+
+func (r *PostgresRepository) CreateDetectionRequest(ctx context.Context, req domain.DetectionRequest) error {
+	createdAt, err := time.Parse(time.RFC3339, req.CreatedAt)
+	if err != nil {
+		createdAt = time.Now().UTC()
+	}
+
+	_, err = r.db.ExecContext(
+		ctx,
+		`INSERT INTO detection_requests (id, image_name, image_path, site, model, confidence_threshold, status, requested_by, prediction_data, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		req.ID,
+		req.ImageName,
+		req.ImagePath,
+		req.Site,
+		req.Model,
+		req.ConfidenceThreshold,
+		req.Status,
+		req.RequestedBy,
+		req.PredictionData,
+		createdAt,
+	)
+	return err
+}
+
+func (r *PostgresRepository) ListDetectionRequests(ctx context.Context, status string, page, limit int) ([]domain.DetectionRequest, int, error) {
+	status = strings.TrimSpace(status)
+	if strings.EqualFold(status, "all") {
+		status = ""
+	}
+
+	whereClause := ""
+	args := make([]any, 0, 3)
+	if status != "" {
+		args = append(args, status)
+		whereClause = " WHERE status = $1"
+	}
+
+	countQuery := "SELECT COUNT(*) FROM detection_requests" + whereClause
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	pagedArgs := append(append([]any{}, args...), limit, offset)
+	query := fmt.Sprintf(
+		`SELECT id, image_name, image_path, site, model, confidence_threshold, status, requested_by, reviewed_by, review_notes, created_at, reviewed_at, prediction_data
+		 FROM detection_requests%s
+		 ORDER BY created_at DESC
+		 LIMIT $%d OFFSET $%d`,
+		whereClause,
+		len(args)+1,
+		len(args)+2,
+	)
+
+	rows, err := r.db.QueryContext(ctx, query, pagedArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	items := make([]domain.DetectionRequest, 0, limit)
+	for rows.Next() {
+		var item domain.DetectionRequest
+		var createdAt time.Time
+		var reviewedAt sql.NullTime
+		var reviewedBy, reviewNotes, predictionData sql.NullString
+
+		if err := rows.Scan(
+			&item.ID,
+			&item.ImageName,
+			&item.ImagePath,
+			&item.Site,
+			&item.Model,
+			&item.ConfidenceThreshold,
+			&item.Status,
+			&item.RequestedBy,
+			&reviewedBy,
+			&reviewNotes,
+			&createdAt,
+			&reviewedAt,
+			&predictionData,
+		); err != nil {
+			return nil, 0, err
+		}
+
+		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+		if reviewedAt.Valid {
+			item.ReviewedAt = reviewedAt.Time.UTC().Format(time.RFC3339)
+		}
+		if reviewedBy.Valid {
+			item.ReviewedBy = reviewedBy.String
+		}
+		if reviewNotes.Valid {
+			item.ReviewNotes = reviewNotes.String
+		}
+		if predictionData.Valid {
+			item.PredictionData = predictionData.String
+		}
+
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
+}
+
+func (r *PostgresRepository) GetDetectionRequestByID(ctx context.Context, id string) (domain.DetectionRequest, error) {
+	var item domain.DetectionRequest
+	var createdAt time.Time
+	var reviewedAt sql.NullTime
+	var reviewedBy, reviewNotes, predictionData sql.NullString
+
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT id, image_name, image_path, site, model, confidence_threshold, status, requested_by, reviewed_by, review_notes, created_at, reviewed_at, prediction_data
+		 FROM detection_requests
+		 WHERE id = $1`,
+		id,
+	).Scan(
+		&item.ID,
+		&item.ImageName,
+		&item.ImagePath,
+		&item.Site,
+		&item.Model,
+		&item.ConfidenceThreshold,
+		&item.Status,
+		&item.RequestedBy,
+		&reviewedBy,
+		&reviewNotes,
+		&createdAt,
+		&reviewedAt,
+		&predictionData,
+	)
+	if err != nil {
+		return domain.DetectionRequest{}, err
+	}
+
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	if reviewedAt.Valid {
+		item.ReviewedAt = reviewedAt.Time.UTC().Format(time.RFC3339)
+	}
+	if reviewedBy.Valid {
+		item.ReviewedBy = reviewedBy.String
+	}
+	if reviewNotes.Valid {
+		item.ReviewNotes = reviewNotes.String
+	}
+	if predictionData.Valid {
+		item.PredictionData = predictionData.String
+	}
+
+	return item, nil
+}
+
+func (r *PostgresRepository) UpdateDetectionRequestStatus(ctx context.Context, id, status, reviewedBy, notes string) error {
+	now := time.Now().UTC()
+	_, err := r.db.ExecContext(
+		ctx,
+		`UPDATE detection_requests
+		 SET status = $1, reviewed_by = $2, review_notes = $3, reviewed_at = $4
+		 WHERE id = $5`,
+		status,
+		reviewedBy,
+		notes,
+		now,
+		id,
+	)
+	return err
+}
+
+func (r *PostgresRepository) DeleteDetectionRequestByID(ctx context.Context, id string) (bool, error) {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM detection_requests WHERE id = $1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return affectedRows > 0, nil
 }
 
 func countQueryForTable(table string) (string, error) {

@@ -15,10 +15,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/detection" element={<Detection />} />
-            <Route path="/monitoring" element={<Monitoring />} />
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/detection" element={<Detection />} />
+                        <Route path="/monitoring" element={<Monitoring />} />
             <Route path="/datasets" element={<Datasets />} />
             <Route path="/models" element={<Models />} />
             <Route path="/analytics" element={<Analytics />} />

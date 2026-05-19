@@ -1,8 +1,10 @@
 import { X } from 'lucide-react'
 import Button from './Button'
 
-export default function Modal({ open, title, children, onClose }) {
-  if (!open) {
+export default function Modal({ open, isOpen, title, children, onClose }) {
+  const visible = open ?? isOpen
+
+  if (!visible) {
     return null
   }
 

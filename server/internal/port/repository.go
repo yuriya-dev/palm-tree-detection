@@ -23,7 +23,14 @@ type Repository interface {
 	CreateDataset(ctx context.Context, dataset domain.Dataset) error
 	DeleteDatasetByID(ctx context.Context, id string) (bool, error)
 
-	ListModels(ctx context.Context) ([]domain.Model, error)
+		ListModels(ctx context.Context) ([]domain.Model, error)
 	ActivateModel(ctx context.Context, id string) (domain.Model, error)
 	GetModelByID(ctx context.Context, id string) (domain.Model, error)
+
+	// Detection Requests
+	CreateDetectionRequest(ctx context.Context, req domain.DetectionRequest) error
+	ListDetectionRequests(ctx context.Context, status string, page, limit int) ([]domain.DetectionRequest, int, error)
+	GetDetectionRequestByID(ctx context.Context, id string) (domain.DetectionRequest, error)
+	UpdateDetectionRequestStatus(ctx context.Context, id, status, reviewedBy, notes string) error
+	DeleteDetectionRequestByID(ctx context.Context, id string) (bool, error)
 }

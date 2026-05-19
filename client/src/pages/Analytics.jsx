@@ -128,7 +128,7 @@ export default function Analytics() {
         key: 'total',
         title: 'Total Trees',
         value: totalTrees,
-        trend: trendDelta,
+        trend: null,
         icon: 'trees',
       },
       {

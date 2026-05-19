@@ -32,6 +32,24 @@ const fallbackDetection = (status, confidence) => [
   },
 ]
 
+const buildResult = ({ imageUrl, selectedModel, confidenceThreshold, detection, prediction }) => {
+  const uiDetections = mapPredictionBoxes(prediction, detection, confidenceThreshold)
+  const status = normalizeStatus(prediction?.status || detection?.status)
+
+  return {
+    imageUrl,
+    selectedModel,
+    confidenceThreshold,
+    status,
+    prediction,
+    detection,
+    detections: uiDetections,
+    count: uiDetections.length,
+    breakdown: buildBreakdown(uiDetections),
+    processedAt: new Date().toISOString(),
+  }
+}
+
 const mapPredictionBoxes = (prediction, detection, confidenceThreshold) => {
   const imageWidth = Number(prediction?.image_size?.width || 0)
   const imageHeight = Number(prediction?.image_size?.height || 0)
@@ -78,23 +96,45 @@ export default function useDetection() {
     clearResult,
   } = useDetectionStore()
 
-  const runDetection = async ({ file, imageUrl }) => {
-    if (!file || !imageUrl) {
-      return null
-    }
+    const runDetection = async ({ file, imageUrl, skipApproval = false }) => {
+      if (!file || !imageUrl) {
+        return null
+      }
 
-    setRunning(true)
+      setRunning(true)
 
-    try {
-      const formData = new FormData()
-      formData.append('image', file)
-      formData.append('site', selectedModel)
-      formData.append('model', 'mopad')
-      formData.append('confidence_threshold', confidenceThreshold.toFixed(2))
+      try {
+        const formData = new FormData()
+        formData.append('image', file)
+        formData.append('site', selectedModel)
+        formData.append('model', 'mopad')
+        formData.append('confidence_threshold', confidenceThreshold.toFixed(2))
+        formData.append('require_approval', skipApproval ? 'false' : 'true') // Enable/disable approval workflow
+        formData.append('requested_by', 'user') // You can get this from auth context
 
-      console.log('[Detection] Sending request with:', { selectedModel, confidenceThreshold })
-      const response = await apiEndpoints.detect(formData)
-      console.log('[Detection] Response received:', response)
+        console.log('[Detection] Sending request with:', { selectedModel, confidenceThreshold, skipApproval })
+        const response = await apiEndpoints.detect(formData)
+        console.log('[Detection] Response received:', response)
+
+        // Check if it's a pending request (HTTP 202)
+        if (response?.data?.status === 'pending') {
+          console.log('[Detection] Request is pending approval')
+        
+          // Create a preview result for the pending request
+          const previewResult = {
+            imageUrl,
+            selectedModel,
+            confidenceThreshold,
+            status: 'pending',
+            detections: [],
+            count: 0,
+            breakdown: [],
+            processedAt: new Date().toISOString(),
+          }
+        
+          setResult(previewResult)
+          return { status: 'pending', data: response.data }
+        }
 
       const rawData = response?.data || response || {}
       console.log('[Detection] Parsed rawData:', rawData)
@@ -132,6 +172,25 @@ export default function useDetection() {
       setRunning(false)
     }
   }
+  
+  const applyDetectionOutcome = ({
+    imageUrl,
+    detection,
+    prediction,
+    selectedModel: nextSelectedModel = selectedModel,
+    confidenceThreshold: nextConfidenceThreshold = confidenceThreshold,
+  }) => {
+    const nextResult = buildResult({
+      imageUrl,
+      selectedModel: nextSelectedModel,
+      confidenceThreshold: nextConfidenceThreshold,
+      detection,
+      prediction,
+    })
+
+    setResult(nextResult)
+    return nextResult
+  }
 
   return {
     selectedModel,
@@ -141,6 +200,7 @@ export default function useDetection() {
     setModel,
     setConfidenceThreshold,
     runDetection,
+    applyDetectionOutcome,
     clearResult,
   }
 }

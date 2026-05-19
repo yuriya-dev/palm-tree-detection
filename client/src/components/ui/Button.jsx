@@ -24,6 +24,9 @@ export default function Button({
   children,
   ...props
 }) {
+  const resolvedProps =
+    Component === 'button' && props.type == null ? { type: 'button', ...props } : props
+
   return createElement(
     Component,
     {
@@ -33,7 +36,7 @@ export default function Button({
         SIZE_CLASS[size],
         className,
       ),
-      ...props,
+      ...resolvedProps,
     },
     children,
   )

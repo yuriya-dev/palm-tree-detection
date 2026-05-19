@@ -90,7 +90,7 @@ export default function Monitoring() {
               <h3 className="font-display text-2xl text-slate-900">Interactive Tree Map</h3>
               <p className="text-sm text-slate-500">Klik marker untuk melihat detail pohon.</p>
             </div>
-            <SiteMap markers={trees} height={460} zoom={12} interactive />
+            <SiteMap markers={trees} height={460} zoom={16} interactive />
           </section>
 
           <section>

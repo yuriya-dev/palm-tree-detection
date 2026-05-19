@@ -27,9 +27,15 @@ export const apiEndpoints = {
         'Content-Type': 'multipart/form-data',
       },
     }),
-  listDetections: (params = {}) => api.get('/api/v1/detections', { params }),
+    listDetections: (params = {}) => api.get('/api/v1/detections', { params }),
   getDetectionDetail: (id) => api.get(`/api/v1/detections/${id}`),
   deleteDetection: (id) => api.delete(`/api/v1/detections/${id}`),
+
+  // Detection Requests (for approval workflow)
+  listDetectionRequests: (params = {}) => api.get('/api/v1/detection-requests', { params }),
+  getDetectionRequest: (id) => api.get(`/api/v1/detection-requests/${id}`),
+  reviewDetectionRequest: (id, data) => api.post(`/api/v1/detection-requests/${id}/review`, data),
+  deleteDetectionRequest: (id) => api.delete(`/api/v1/detection-requests/${id}`),
 
   listTrees: (params = {}) => api.get('/api/v1/trees', { params }),
   getTreeDetail: (id) => api.get(`/api/v1/trees/${id}`),

@@ -25,6 +25,7 @@ const iconMap = {
 
 export default function StatCard({ title, value, trend = 0, icon = 'trees' }) {
   const Icon = iconMap[icon] || Trees
+  const hasTrend = trend !== null && trend !== undefined
   const isPositive = trend >= 0
 
   return (
@@ -34,16 +35,18 @@ export default function StatCard({ title, value, trend = 0, icon = 'trees' }) {
         <div>
           <p className="text-sm font-medium text-slate-500">{title}</p>
           <p className="mt-3 font-display text-3xl leading-none text-slate-900">{value}</p>
-          <p
-            className={`mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-              isPositive
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-rose-50 text-rose-700'
-            }`}
-          >
-            {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-            {Math.abs(trend)}%
-          </p>
+          {hasTrend && (
+            <p
+              className={`mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                isPositive
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-rose-50 text-rose-700'
+              }`}
+            >
+              {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+              {Math.abs(trend)}%
+            </p>
+          )}
         </div>
 
         <div className="rounded-xl bg-primary-50 p-2.5 text-primary-900">

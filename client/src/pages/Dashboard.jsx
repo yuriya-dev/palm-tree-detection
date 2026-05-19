@@ -85,7 +85,7 @@ export default function Dashboard() {
           key: 'total',
           title: 'Total Trees',
           value: Number(treeStats.total || 0),
-          trend: trendDelta,
+          trend: null,
           icon: 'trees',
         },
         {

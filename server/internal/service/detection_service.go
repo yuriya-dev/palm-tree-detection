@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,7 +35,140 @@ func NewDetectionService(repo port.Repository, mlRunner port.MLRunner) *Detectio
 	return &DetectionService{repo: repo, mlRunner: mlRunner}
 }
 
+func (s *DetectionService) CreateDetectionRequest(ctx context.Context, req DetectionRequest, requestedBy string) (domain.DetectionRequest, error) {
+	site := strings.TrimSpace(req.Site)
+	if site == "" {
+		site = "Site 1"
+	}
+
+	// Save image to temporary storage
+	uploadDir := "uploads/pending"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return domain.DetectionRequest{}, fmt.Errorf("failed to create upload directory: %w", err)
+	}
+
+	imagePath := filepath.Join(uploadDir, fmt.Sprintf("%d_%s", time.Now().Unix(), req.ImageName))
+	if err := os.WriteFile(imagePath, req.ImageBytes, 0644); err != nil {
+		return domain.DetectionRequest{}, fmt.Errorf("failed to save image: %w", err)
+	}
+
+	// Run ML prediction for preview
+	var predictionData string
+	if s.mlRunner != nil && len(req.ImageBytes) > 0 {
+		prediction, err := s.mlRunner.Predict(ctx, port.MLPredictRequest{
+			ImageName:           req.ImageName,
+			ImageBytes:          req.ImageBytes,
+			Site:                site,
+			Model:               req.Model,
+			ConfidenceThreshold: req.ConfidenceThreshold,
+		})
+		if err == nil {
+			if jsonBytes, err := json.Marshal(prediction); err == nil {
+				predictionData = string(jsonBytes)
+			}
+		}
+	}
+
+	detectionReqID := fmt.Sprintf("DREQ-%d", time.Now().Unix()%100000)
+	now := time.Now().UTC()
+
+	detectionRequest := domain.DetectionRequest{
+		ID:                  detectionReqID,
+		ImageName:           req.ImageName,
+		ImagePath:           imagePath,
+		Site:                site,
+		Model:               req.Model,
+		ConfidenceThreshold: req.ConfidenceThreshold,
+		Status:              "pending",
+		RequestedBy:         requestedBy,
+		CreatedAt:           now.Format(time.RFC3339),
+		PredictionData:      predictionData,
+	}
+
+	if err := s.repo.CreateDetectionRequest(ctx, detectionRequest); err != nil {
+		return domain.DetectionRequest{}, err
+	}
+
+	return detectionRequest, nil
+}
+
+func (s *DetectionService) ListDetectionRequests(ctx context.Context, status string, page, limit int) ([]domain.DetectionRequest, int, error) {
+	return s.repo.ListDetectionRequests(ctx, status, page, limit)
+}
+
+func (s *DetectionService) GetDetectionRequestByID(ctx context.Context, id string) (domain.DetectionRequest, error) {
+	return s.repo.GetDetectionRequestByID(ctx, id)
+}
+
+func (s *DetectionService) ReviewDetectionRequest(ctx context.Context, id string, review domain.DetectionRequestReview, reviewedBy string) (DetectionOutcome, error) {
+	// Get the detection request
+	detectionReq, err := s.repo.GetDetectionRequestByID(ctx, id)
+	if err != nil {
+		return DetectionOutcome{}, err
+	}
+
+	if detectionReq.Status != "pending" {
+		return DetectionOutcome{}, fmt.Errorf("detection request is not pending")
+	}
+
+	// Update status
+	var newStatus string
+	if review.Action == "approve" {
+		newStatus = "approved"
+	} else if review.Action == "reject" {
+		newStatus = "rejected"
+	} else {
+		return DetectionOutcome{}, fmt.Errorf("invalid action: %s", review.Action)
+	}
+
+	if err := s.repo.UpdateDetectionRequestStatus(ctx, id, newStatus, reviewedBy, review.Notes); err != nil {
+		return DetectionOutcome{}, err
+	}
+
+	// If approved, create the actual detection
+	if newStatus == "approved" {
+		// Read the saved image
+		imageBytes, err := os.ReadFile(detectionReq.ImagePath)
+		if err != nil {
+			return DetectionOutcome{}, fmt.Errorf("failed to read saved image: %w", err)
+		}
+
+		// Run detection
+		outcome, err := s.runDetectionInternal(ctx, DetectionRequest{
+			ImageName:           detectionReq.ImageName,
+			Site:                detectionReq.Site,
+			Model:               detectionReq.Model,
+			ConfidenceThreshold: detectionReq.ConfidenceThreshold,
+			ImageBytes:          imageBytes,
+		})
+		if err != nil {
+			return DetectionOutcome{}, err
+		}
+
+		// Clean up the temporary image
+		_ = os.Remove(detectionReq.ImagePath)
+
+		return outcome, nil
+	}
+
+	return DetectionOutcome{}, nil
+}
+
+func (s *DetectionService) DeleteDetectionRequestByID(ctx context.Context, id string) (bool, error) {
+	// Get the detection request to clean up the image
+	detectionReq, err := s.repo.GetDetectionRequestByID(ctx, id)
+	if err == nil && detectionReq.ImagePath != "" {
+		_ = os.Remove(detectionReq.ImagePath)
+	}
+
+	return s.repo.DeleteDetectionRequestByID(ctx, id)
+}
+
 func (s *DetectionService) RunDetection(ctx context.Context, req DetectionRequest) (DetectionOutcome, error) {
+	return s.runDetectionInternal(ctx, req)
+}
+
+func (s *DetectionService) runDetectionInternal(ctx context.Context, req DetectionRequest) (DetectionOutcome, error) {
 	site := strings.TrimSpace(req.Site)
 	if site == "" {
 		site = "Site 1"
@@ -76,9 +212,61 @@ func (s *DetectionService) RunDetection(ctx context.Context, req DetectionReques
 		return DetectionOutcome{}, err
 	}
 
+	now := time.Now().UTC()
+
+	// If the ML prediction includes multiple detection boxes, persist each as a tree+detection
+	if len(prediction.Detections) > 0 {
+		created := make([]domain.Detection, 0, len(prediction.Detections))
+		for i, box := range prediction.Detections {
+			// generate unique sequential tree id
+			treeNum := maxTreeID + 1 + i
+			treeID := fmt.Sprintf("TREE-%04d", treeNum)
+			detectionID := fmt.Sprintf("DET-%d-%d", time.Now().Unix()%100000, i)
+
+			boxStatus := status
+			if normalized := normalizeStatus(box.Status); normalized != "" {
+				boxStatus = normalized
+			}
+
+			boxConfidence := confidence
+			if box.Confidence > 0 {
+				boxConfidence = clampConfidence(box.Confidence)
+			}
+
+			detection := domain.Detection{
+				ID:         detectionID,
+				TreeID:     treeID,
+				Site:       site,
+				Status:     boxStatus,
+				Confidence: boxConfidence,
+				ImageName:  req.ImageName,
+				CreatedAt:  now.Format(time.RFC3339),
+			}
+
+			tree := domain.Tree{
+				ID:         treeID,
+				Site:       site,
+				Lat:        -2.24 - float64(treeNum)*0.0011,
+				Lng:        113.89 + float64(treeNum)*0.0014,
+				Status:     boxStatus,
+				Confidence: detection.Confidence,
+				DetectedAt: now.Format("2006-01-02"),
+			}
+
+			if err := s.repo.CreateDetectionAndTree(ctx, detection, tree); err != nil {
+				return DetectionOutcome{}, err
+			}
+
+			created = append(created, detection)
+		}
+
+		// return the first created detection along with the prediction
+		return DetectionOutcome{Detection: created[0], Prediction: prediction}, nil
+	}
+
+	// Fallback: no per-box detections, create a single detection/tree as before
 	treeID := fmt.Sprintf("TREE-%04d", maxTreeID+1)
 	detectionID := fmt.Sprintf("DET-%d", time.Now().Unix()%100000)
-	now := time.Now().UTC()
 
 	detection := domain.Detection{
 		ID:         detectionID,

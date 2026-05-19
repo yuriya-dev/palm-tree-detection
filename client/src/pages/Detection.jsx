@@ -1,15 +1,20 @@
 import { SlidersHorizontal, WandSparkles } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import useDetection from '../hooks/useDetection'
 import useUpload from '../hooks/useUpload'
+import { apiEndpoints } from '../services/api'
 import Skeleton from '../components/shared/Skeleton'
 import DetectionResult from '../components/ui/DetectionResult'
 import UploadZone from '../components/ui/UploadZone'
 import Button from '../components/ui/Button'
+import { toast } from '../components/shared/ToastProvider.jsx'
 
 const models = ['Site 1', 'Site 2']
 
 export default function Detection() {
+  const [isReviewing, setIsReviewing] = useState(false)
+  const [reviewDecision, setReviewDecision] = useState(null)
+
   const {
     file,
     previewUrl,
@@ -43,18 +48,57 @@ export default function Detection() {
       return
     }
 
+    setReviewDecision(null)
     await startUploadSimulation()
     try {
-      await runDetection({ file, imageUrl: previewUrl })
+      await runDetection({ file, imageUrl: previewUrl, skipApproval: true })
+      toast.success('Deteksi selesai. Silakan review hasilnya.')
     } catch (error) {
       console.error(error)
-      window.alert(error.message || 'Detection request failed')
+      toast.error(error.message || 'Detection request failed')
+    }
+  }
+
+  const handleApprove = async () => {
+    if (!result) return
+
+    setIsReviewing(true)
+    try {
+      toast.success('Hasil deteksi disetujui')
+      handleReset()
+    } catch (error) {
+      console.error('Failed to approve detection:', error)
+      toast.error(error.message || 'Failed to approve detection')
+    } finally {
+      setIsReviewing(false)
+    }
+  }
+
+  const handleReject = async () => {
+    const detectionId = result?.detection?.id ?? result?.id ?? result?.detection_id
+    if (!detectionId) {
+      toast.error('Tidak ada hasil deteksi yang bisa ditolak')
+      return
+    }
+
+    setIsReviewing(true)
+    try {
+      await apiEndpoints.deleteDetection(detectionId)
+
+      toast.success('Hasil deteksi ditolak dan dihapus')
+      handleReset()
+    } catch (error) {
+      console.error('Failed to reject detection:', error)
+      toast.error(error.message || 'Failed to reject detection')
+    } finally {
+      setIsReviewing(false)
     }
   }
 
   const handleReset = () => {
     resetUpload()
     clearResult()
+    setReviewDecision(null)
   }
 
   return (
@@ -123,8 +167,18 @@ export default function Detection() {
         </div>
       </section>
 
-      <section>
-        {isRunning ? <Skeleton className="h-[560px]" /> : <DetectionResult result={result} />}
+            <section>
+        {isRunning ? (
+          <Skeleton className="h-[560px]" />
+        ) : (
+          <DetectionResult
+            result={result}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            isReviewing={isReviewing}
+            reviewDecision={reviewDecision}
+          />
+        )}
       </section>
     </div>
   )
