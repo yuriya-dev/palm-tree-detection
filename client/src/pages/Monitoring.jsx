@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import SiteMap from '../components/maps/SiteMap'
 import EmptyState from '../components/shared/EmptyState'
 import Skeleton, { TableSkeleton } from '../components/shared/Skeleton'
@@ -16,8 +17,20 @@ export default function Monitoring() {
   const [filters, setFilters] = useState(defaultFilters)
   const { trees, loading, error, isEmpty } = useTrees(filters)
 
+  const pageHelmet = (
+    <Helmet>
+      <title>Monitoring | Palm Tree Detection</title>
+      <meta
+        name="description"
+        content="Pantau pohon pada peta interaktif dan tabel status berdasarkan filter site dan tanggal."
+      />
+    </Helmet>
+  )
+
   return (
     <div className="space-y-6">
+      {pageHelmet}
+
       <section className="card grid gap-4 p-5 md:grid-cols-4">
         <label className="space-y-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Site</span>

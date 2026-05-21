@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS models
+ADD COLUMN IF NOT EXISTS artifact_path TEXT;

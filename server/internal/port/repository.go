@@ -23,7 +23,9 @@ type Repository interface {
 	CreateDataset(ctx context.Context, dataset domain.Dataset) error
 	DeleteDatasetByID(ctx context.Context, id string) (bool, error)
 
-		ListModels(ctx context.Context) ([]domain.Model, error)
+	ListModels(ctx context.Context) ([]domain.Model, error)
+	CreateModel(ctx context.Context, model domain.Model) error
+	DeleteModelByID(ctx context.Context, id string) (bool, error)
 	ActivateModel(ctx context.Context, id string) (domain.Model, error)
 	GetModelByID(ctx context.Context, id string) (domain.Model, error)
 

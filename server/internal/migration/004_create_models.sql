@@ -4,5 +4,6 @@ CREATE TABLE IF NOT EXISTS models (
     site TEXT NOT NULL,
     accuracy DOUBLE PRECISION NOT NULL,
     m_ap DOUBLE PRECISION NOT NULL,
-    status TEXT NOT NULL
+    status TEXT NOT NULL,
+    artifact_path TEXT
 );

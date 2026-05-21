@@ -7,7 +7,7 @@ export const useUIStore = create((set) => ({
 }))
 
 export const useDetectionStore = create((set) => ({
-  selectedModel: 'Site 1',
+  selectedModel: '',
   confidenceThreshold: 0.55,
   isRunning: false,
   result: null,

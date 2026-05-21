@@ -1,5 +1,6 @@
 import { SlidersHorizontal, WandSparkles } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import useDetection from '../hooks/useDetection'
 import useUpload from '../hooks/useUpload'
 import { apiEndpoints } from '../services/api'
@@ -9,11 +10,18 @@ import UploadZone from '../components/ui/UploadZone'
 import Button from '../components/ui/Button'
 import { toast } from '../components/shared/ToastProvider.jsx'
 
-const models = ['Site 1', 'Site 2']
+const mapModelOption = (model) => ({
+  id: model.id,
+  name: model.name || model.id,
+  site: model.site || '',
+  label: `${model.name || model.id}${model.site ? ` · ${model.site}` : ''}`,
+  status: model.status,
+})
 
 export default function Detection() {
   const [isReviewing, setIsReviewing] = useState(false)
   const [reviewDecision, setReviewDecision] = useState(null)
+  const [activeModelOptions, setActiveModelOptions] = useState([])
 
   const {
     file,
@@ -28,15 +36,47 @@ export default function Detection() {
   } = useUpload()
 
   const {
-    selectedModel,
     confidenceThreshold,
     isRunning,
     result,
-    setModel,
     setConfidenceThreshold,
     runDetection,
     clearResult,
   } = useDetection()
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadModelOptions = async () => {
+      try {
+        const response = await apiEndpoints.listModels()
+        const payload = Array.isArray(response?.data) ? response.data : []
+        const options = payload
+          .map(mapModelOption)
+          .filter((model) => model.status?.toLowerCase() === 'active')
+
+        if (!isMounted) {
+          return
+        }
+
+        setActiveModelOptions(options)
+      } catch (error) {
+        console.error('Failed to load models for detection settings:', error)
+        if (isMounted) {
+          setActiveModelOptions([])
+        }
+      }
+    }
+
+    loadModelOptions()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const primaryActiveModel = activeModelOptions[0] || null
+  const activeModelCount = activeModelOptions.length
 
   const confidenceLabel = useMemo(
     () => `${Math.round(confidenceThreshold * 100)}%`,
@@ -44,14 +84,19 @@ export default function Detection() {
   )
 
   const handleRunDetection = async () => {
-    if (!previewUrl || !file || isRunning) {
+    if (!previewUrl || !file || isRunning || !primaryActiveModel) {
       return
     }
 
     setReviewDecision(null)
     await startUploadSimulation()
     try {
-      await runDetection({ file, imageUrl: previewUrl, skipApproval: true })
+      await runDetection({
+        file,
+        imageUrl: previewUrl,
+        skipApproval: true,
+        modelMeta: primaryActiveModel,
+      })
       toast.success('Deteksi selesai. Silakan review hasilnya.')
     } catch (error) {
       console.error(error)
@@ -103,6 +148,14 @@ export default function Detection() {
 
   return (
     <div className="space-y-6">
+      <Helmet>
+        <title>Detection | Palm Tree Detection</title>
+        <meta
+          name="description"
+          content="Unggah citra, jalankan deteksi, dan review hasil menggunakan model active terbaru."
+        />
+      </Helmet>
+
       <section className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <UploadZone
           file={file}
@@ -121,20 +174,43 @@ export default function Detection() {
             <h3 className="mt-2 font-display text-2xl text-slate-900">Detection Settings</h3>
           </div>
 
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select Model</span>
-            <select
-              value={selectedModel}
-              onChange={(event) => setModel(event.target.value)}
-              className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-            >
-              {models.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active Models</p>
+                <p className="mt-1 text-sm text-slate-700">
+                  {activeModelCount > 0
+                    ? ``
+                    : 'Belum ada model active.'}
+                </p>
+              </div>
+              <div className="relative flex h-4 w-4">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex h-4 w-4 rounded-full bg-green-500"></span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {activeModelCount === 0 ? (
+                <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-500">
+                  Aktifkan model di halaman Models
+                </span>
+              ) : (
+                activeModelOptions.map((model) => (
+                  <span
+                    key={model.id}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      model.id === primaryActiveModel?.id
+                        ? 'bg-primary-900 text-white'
+                        : 'bg-white text-slate-600'
+                    }`}
+                  >
+                    {model.label}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -152,7 +228,7 @@ export default function Detection() {
             />
           </div>
 
-          <Button className="h-12 w-full" onClick={handleRunDetection} disabled={!file || isRunning}>
+          <Button className="h-12 w-full" onClick={handleRunDetection} disabled={!file || isRunning || !primaryActiveModel}>
             <WandSparkles size={16} />
             {isRunning ? 'Running detection...' : 'Run Detection'}
           </Button>
@@ -162,7 +238,9 @@ export default function Detection() {
               <SlidersHorizontal size={14} />
               Current profile
             </p>
-            <p className="mt-1">{selectedModel} with threshold {confidenceLabel}</p>
+            <p className="mt-1">
+              {primaryActiveModel?.label || 'No active model'} with threshold {confidenceLabel}
+            </p>
           </div>
         </div>
       </section>

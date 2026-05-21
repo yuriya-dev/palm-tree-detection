@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import DetectionChart from '../components/charts/DetectionChart'
 import SiteMap from '../components/maps/SiteMap'
 import EmptyState from '../components/shared/EmptyState'
@@ -148,9 +149,20 @@ export default function Dashboard() {
     loadDashboard()
   }, [loadDashboard])
 
+  const pageHelmet = (
+    <Helmet>
+      <title>Dashboard | Palm Tree Detection</title>
+      <meta
+        name="description"
+        content="Ringkasan kondisi pohon, tren deteksi, dan peta site untuk pemantauan cepat."
+      />
+    </Helmet>
+  )
+
   if (loading) {
     return (
       <div className="space-y-6">
+        {pageHelmet}
         <StatGridSkeleton />
         <div className="grid gap-6 lg:grid-cols-2">
           <Skeleton className="h-80" />
@@ -163,26 +175,34 @@ export default function Dashboard() {
 
   if (error && dashboardStats.length === 0) {
     return (
-      <EmptyState
-        title="Gagal memuat dashboard"
-        description={error?.message || 'Pastikan backend API sedang berjalan lalu coba lagi.'}
-        actionLabel="Muat Ulang"
-        onAction={loadDashboard}
-      />
+      <>
+        {pageHelmet}
+        <EmptyState
+          title="Gagal memuat dashboard"
+          description={error?.message || 'Pastikan backend API sedang berjalan lalu coba lagi.'}
+          actionLabel="Muat Ulang"
+          onAction={loadDashboard}
+        />
+      </>
     )
   }
 
   if (dashboardStats.length === 0) {
     return (
-      <EmptyState
-        title="Belum ada data dashboard"
-        description="Data overview akan muncul setelah pipeline deteksi pertama selesai diproses."
-      />
+      <>
+        {pageHelmet}
+        <EmptyState
+          title="Belum ada data dashboard"
+          description="Data overview akan muncul setelah pipeline deteksi pertama selesai diproses."
+        />
+      </>
     )
   }
 
   return (
     <div className="space-y-6">
+      {pageHelmet}
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {dashboardStats.map((stat) => (
           <StatCard

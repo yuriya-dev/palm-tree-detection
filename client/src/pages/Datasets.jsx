@@ -1,5 +1,6 @@
 import { Download, Eye, Trash2, UploadCloud } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import DonutChart from '../components/charts/DonutChart'
 import EmptyState from '../components/shared/EmptyState'
 import Skeleton from '../components/shared/Skeleton'
@@ -44,6 +45,16 @@ export default function Datasets() {
   useEffect(() => {
     loadDatasets()
   }, [loadDatasets])
+
+  const pageHelmet = (
+    <Helmet>
+      <title>Datasets | Palm Tree Detection</title>
+      <meta
+        name="description"
+        content="Unggah, lihat, dan kelola dataset untuk training serta evaluasi model deteksi pohon."
+      />
+    </Helmet>
+  )
 
   const datasetComposition = useMemo(() => {
     const totalImages = datasets.reduce((sum, item) => sum + item.images, 0)
@@ -104,6 +115,7 @@ export default function Datasets() {
   if (loading) {
     return (
       <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
+        {pageHelmet}
         <Skeleton className="h-[600px]" />
         <Skeleton className="h-[600px]" />
       </div>
@@ -113,6 +125,7 @@ export default function Datasets() {
   if (error && datasets.length === 0) {
     return (
       <>
+        {pageHelmet}
         <input
           ref={fileInputRef}
           type="file"
@@ -133,6 +146,7 @@ export default function Datasets() {
   if (datasets.length === 0) {
     return (
       <>
+        {pageHelmet}
         <input
           ref={fileInputRef}
           type="file"
@@ -152,6 +166,8 @@ export default function Datasets() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
+      {pageHelmet}
+
       <input
         ref={fileInputRef}
         type="file"

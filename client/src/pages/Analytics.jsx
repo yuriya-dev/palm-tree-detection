@@ -1,5 +1,6 @@
 import { Download, FileSpreadsheet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import {
   Bar,
   BarChart,
@@ -87,6 +88,16 @@ export default function Analytics() {
     return () => clearTimeout(timer)
   }, [fetchAnalytics])
 
+  const pageHelmet = (
+    <Helmet>
+      <title>Analytics | Palm Tree Detection</title>
+      <meta
+        name="description"
+        content="Analisis tren deteksi, distribusi site, dan ringkasan performa periode tertentu."
+      />
+    </Helmet>
+  )
+
   const heatmapActivity = useMemo(() => {
     if (weeklyTrend.length === 0) {
       return []
@@ -158,6 +169,7 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="space-y-6">
+        {pageHelmet}
         <Skeleton className="h-20" />
         <StatGridSkeleton />
         <div className="grid gap-6 xl:grid-cols-2">
@@ -171,26 +183,34 @@ export default function Analytics() {
 
   if (error && weeklyTrend.length === 0) {
     return (
-      <EmptyState
-        title="Gagal memuat analytics"
-        description={error?.message || 'Pastikan backend API sedang berjalan lalu coba lagi.'}
-        actionLabel="Muat Ulang"
-        onAction={fetchAnalytics}
-      />
+      <>
+        {pageHelmet}
+        <EmptyState
+          title="Gagal memuat analytics"
+          description={error?.message || 'Pastikan backend API sedang berjalan lalu coba lagi.'}
+          actionLabel="Muat Ulang"
+          onAction={fetchAnalytics}
+        />
+      </>
     )
   }
 
   if (weeklyTrend.length === 0) {
     return (
-      <EmptyState
-        title="Belum ada data analytics"
-        description="Aktivitas deteksi dan laporan periodik akan ditampilkan di halaman ini."
-      />
+      <>
+        {pageHelmet}
+        <EmptyState
+          title="Belum ada data analytics"
+          description="Aktivitas deteksi dan laporan periodik akan ditampilkan di halaman ini."
+        />
+      </>
     )
   }
 
   return (
     <div className="space-y-6">
+      {pageHelmet}
+
       <section className="card flex flex-wrap items-end justify-between gap-4 p-5">
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-2">

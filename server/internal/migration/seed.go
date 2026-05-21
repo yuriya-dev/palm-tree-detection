@@ -184,21 +184,22 @@ func seedModels(ctx context.Context, db *sql.DB) error {
 	}
 
 	models := []struct {
-		id       string
-		name     string
-		site     string
-		accuracy float64
-		modelMAP float64
-		status   string
+		id           string
+		name         string
+		site         string
+		accuracy     float64
+		modelMAP     float64
+		status       string
+		artifactPath string
 	}{
-		{id: "MOD-S1-V4", name: "PalmNet Site 1", site: "Site 1", accuracy: 95.2, modelMAP: 0.78, status: "Active"},
-		{id: "MOD-S2-V3", name: "PalmNet Site 2", site: "Site 2", accuracy: 93.9, modelMAP: 0.74, status: "Training"},
-		{id: "MOD-GLOBAL-V2", name: "PalmNet Global", site: "Multi Site", accuracy: 92.1, modelMAP: 0.70, status: "Inactive"},
+		{id: "MOD-S1-V4", name: "PalmNet Site 1", site: "Site 1", accuracy: 95.2, modelMAP: 0.78, status: "Active", artifactPath: "models/best.pt"},
+		{id: "MOD-S2-V3", name: "PalmNet Site 2", site: "Site 2", accuracy: 93.9, modelMAP: 0.74, status: "Training", artifactPath: "models/best2.pt"},
+		{id: "MOD-GLOBAL-V2", name: "PalmNet Global", site: "Multi Site", accuracy: 92.1, modelMAP: 0.70, status: "Inactive", artifactPath: "models/best3.pt"},
 	}
 
 	query := `
-		INSERT INTO models (id, name, site, accuracy, m_ap, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO models (id, name, site, accuracy, m_ap, status, artifact_path)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (id) DO NOTHING
 	`
 
@@ -212,6 +213,7 @@ func seedModels(ctx context.Context, db *sql.DB) error {
 			model.accuracy,
 			model.modelMAP,
 			model.status,
+			model.artifactPath,
 		); err != nil {
 			return err
 		}

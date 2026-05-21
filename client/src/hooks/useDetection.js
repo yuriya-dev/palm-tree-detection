@@ -96,23 +96,27 @@ export default function useDetection() {
     clearResult,
   } = useDetectionStore()
 
-    const runDetection = async ({ file, imageUrl, skipApproval = false }) => {
+    const runDetection = async ({ file, imageUrl, skipApproval = false, modelMeta = null }) => {
       if (!file || !imageUrl) {
         return null
       }
+
+      const selectedSite = modelMeta?.site || selectedModel
+      const selectedModelName = modelMeta?.name || modelMeta?.id || selectedModel
+      const selectedModelLabel = modelMeta?.label || selectedModelName || selectedSite
 
       setRunning(true)
 
       try {
         const formData = new FormData()
         formData.append('image', file)
-        formData.append('site', selectedModel)
-        formData.append('model', 'mopad')
+        formData.append('site', selectedSite)
+        formData.append('model', selectedModelName)
         formData.append('confidence_threshold', confidenceThreshold.toFixed(2))
         formData.append('require_approval', skipApproval ? 'false' : 'true') // Enable/disable approval workflow
         formData.append('requested_by', 'user') // You can get this from auth context
 
-        console.log('[Detection] Sending request with:', { selectedModel, confidenceThreshold, skipApproval })
+        console.log('[Detection] Sending request with:', { selectedModel: selectedModelLabel, confidenceThreshold, skipApproval })
         const response = await apiEndpoints.detect(formData)
         console.log('[Detection] Response received:', response)
 
@@ -123,7 +127,7 @@ export default function useDetection() {
           // Create a preview result for the pending request
           const previewResult = {
             imageUrl,
-            selectedModel,
+            selectedModel: selectedModelLabel,
             confidenceThreshold,
             status: 'pending',
             detections: [],
@@ -151,7 +155,7 @@ export default function useDetection() {
 
       const nextResult = {
         imageUrl,
-        selectedModel,
+        selectedModel: selectedModelLabel,
         confidenceThreshold,
         status,
         prediction: rawPrediction,

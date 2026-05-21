@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Skeleton from '../components/shared/Skeleton'
 import Input from '../components/ui/Input'
 
@@ -37,12 +38,29 @@ export default function Settings() {
     return () => clearTimeout(timer)
   }, [])
 
+  const pageHelmet = (
+    <Helmet>
+      <title>Settings | Palm Tree Detection</title>
+      <meta
+        name="description"
+        content="Atur preferensi organisasi, ambang deteksi, notifikasi, dan konfigurasi API."
+      />
+    </Helmet>
+  )
+
   if (loading) {
-    return <Skeleton className="h-[520px]" />
+    return (
+      <>
+        {pageHelmet}
+        <Skeleton className="h-[520px]" />
+      </>
+    )
   }
 
   return (
     <div className="card p-5">
+      {pageHelmet}
+
       <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-100 pb-4">
         {tabs.map((tab) => (
           <button

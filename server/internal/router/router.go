@@ -34,8 +34,12 @@ func NewRouter(cfg config.Config, h *handler.Handler) *gin.Engine {
 		api.DELETE("/datasets/:id", h.DeleteDataset)
 
 		api.GET("/models", h.ListModels)
+		api.GET("/models/files", h.ListModelFiles)
+		api.POST("/models", h.CreateModel)
+		api.DELETE("/models/:id", h.DeleteModel)
 		api.POST("/models/:id/activate", h.ActivateModel)
 		api.GET("/models/:id/metrics", h.ModelMetrics)
+		api.GET("/models/:id/export", h.ExportModel)
 
 		api.GET("/analytics/overview", h.AnalyticsOverview)
 		api.GET("/analytics/trend", h.AnalyticsTrend)

@@ -51,8 +51,17 @@ export const apiEndpoints = {
   deleteDataset: (id) => api.delete(`/api/v1/datasets/${id}`),
 
   listModels: () => api.get('/api/v1/models'),
+  listModelFiles: () => api.get('/api/v1/models/files'),
+  createModel: (formData) =>
+    api.post('/api/v1/models', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+  deleteModel: (id) => api.delete(`/api/v1/models/${id}`),
   activateModel: (id) => api.post(`/api/v1/models/${id}/activate`),
   getModelMetrics: (id) => api.get(`/api/v1/models/${id}/metrics`),
+  exportModel: (id) => api.get(`/api/v1/models/${id}/export`),
 
   analyticsOverview: (params = {}) =>
     api.get('/api/v1/analytics/overview', { params }),

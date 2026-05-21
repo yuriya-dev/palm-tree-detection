@@ -434,7 +434,7 @@ func (r *PostgresRepository) DeleteDatasetByID(ctx context.Context, id string) (
 func (r *PostgresRepository) ListModels(ctx context.Context) ([]domain.Model, error) {
 	rows, err := r.db.QueryContext(
 		ctx,
-		`SELECT id, name, site, accuracy, m_ap, status
+		`SELECT id, name, site, accuracy, m_ap, status, COALESCE(artifact_path, '')
 		 FROM models
 		 ORDER BY
 			CASE status
@@ -452,7 +452,7 @@ func (r *PostgresRepository) ListModels(ctx context.Context) ([]domain.Model, er
 	items := make([]domain.Model, 0)
 	for rows.Next() {
 		var item domain.Model
-		if err := rows.Scan(&item.ID, &item.Name, &item.Site, &item.Accuracy, &item.MAP, &item.Status); err != nil {
+		if err := rows.Scan(&item.ID, &item.Name, &item.Site, &item.Accuracy, &item.MAP, &item.Status, &item.ArtifactPath); err != nil {
 			return nil, err
 		}
 
@@ -464,6 +464,36 @@ func (r *PostgresRepository) ListModels(ctx context.Context) ([]domain.Model, er
 	}
 
 	return items, nil
+}
+
+func (r *PostgresRepository) CreateModel(ctx context.Context, model domain.Model) error {
+	_, err := r.db.ExecContext(
+		ctx,
+		`INSERT INTO models (id, name, site, accuracy, m_ap, status, artifact_path)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		model.ID,
+		model.Name,
+		model.Site,
+		model.Accuracy,
+		model.MAP,
+		model.Status,
+		model.ArtifactPath,
+	)
+	return err
+}
+
+func (r *PostgresRepository) DeleteModelByID(ctx context.Context, id string) (bool, error) {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM models WHERE id = $1`, id)
+	if err != nil {
+		return false, err
+	}
+
+	affectedRows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return affectedRows > 0, nil
 }
 
 func (r *PostgresRepository) ActivateModel(ctx context.Context, id string) (domain.Model, error) {
@@ -488,25 +518,14 @@ func (r *PostgresRepository) ActivateModel(ctx context.Context, id string) (doma
 		return domain.Model{}, sql.ErrNoRows
 	}
 
-	if _, err := tx.ExecContext(
-		ctx,
-		`UPDATE models
-		 SET status = 'Inactive'
-		 WHERE id <> $1 AND status <> 'Training'`,
-		id,
-	); err != nil {
-		_ = tx.Rollback()
-		return domain.Model{}, err
-	}
-
 	var model domain.Model
 	if err := tx.QueryRowContext(
 		ctx,
-		`SELECT id, name, site, accuracy, m_ap, status
+		`SELECT id, name, site, accuracy, m_ap, status, COALESCE(artifact_path, '')
 		 FROM models
 		 WHERE id = $1`,
 		id,
-	).Scan(&model.ID, &model.Name, &model.Site, &model.Accuracy, &model.MAP, &model.Status); err != nil {
+	).Scan(&model.ID, &model.Name, &model.Site, &model.Accuracy, &model.MAP, &model.Status, &model.ArtifactPath); err != nil {
 		_ = tx.Rollback()
 		return domain.Model{}, err
 	}
@@ -522,11 +541,11 @@ func (r *PostgresRepository) GetModelByID(ctx context.Context, id string) (domai
 	var model domain.Model
 	if err := r.db.QueryRowContext(
 		ctx,
-		`SELECT id, name, site, accuracy, m_ap, status
+		`SELECT id, name, site, accuracy, m_ap, status, COALESCE(artifact_path, '')
 		 FROM models
 		 WHERE id = $1`,
 		id,
-	).Scan(&model.ID, &model.Name, &model.Site, &model.Accuracy, &model.MAP, &model.Status); err != nil {
+	).Scan(&model.ID, &model.Name, &model.Site, &model.Accuracy, &model.MAP, &model.Status, &model.ArtifactPath); err != nil {
 		return domain.Model{}, err
 	}
 
