@@ -5,9 +5,15 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func Seed(ctx context.Context, db *sql.DB) error {
+	if err := seedUsers(ctx, db); err != nil {
+		return err
+	}
+
 	if err := seedTrees(ctx, db); err != nil {
 		return err
 	}
@@ -25,6 +31,32 @@ func Seed(ctx context.Context, db *sql.DB) error {
 	}
 
 	return nil
+}
+
+// seedUsers inserts a default admin account if no users exist yet.
+// Default: admin@nyawit.id / nyawit2026
+func seedUsers(ctx context.Context, db *sql.DB) error {
+	total, err := countAll(ctx, db, "users")
+	if err != nil || total > 0 {
+		return err
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte("nyawit2026"), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.ExecContext(
+		ctx,
+		`INSERT INTO users (name, email, password, role)
+		 VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (email) DO NOTHING`,
+		"Administrator",
+		"admin@nyawit.id",
+		string(hashed),
+		"admin",
+	)
+	return err
 }
 
 func seedTrees(ctx context.Context, db *sql.DB) error {
@@ -246,6 +278,8 @@ func countQuery(table string) (string, error) {
 		return "SELECT COUNT(*) FROM datasets", nil
 	case "models":
 		return "SELECT COUNT(*) FROM models", nil
+	case "users":
+		return "SELECT COUNT(*) FROM users", nil
 	default:
 		return "", fmt.Errorf("unsupported table: %s", table)
 	}

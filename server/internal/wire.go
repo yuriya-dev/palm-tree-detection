@@ -39,6 +39,7 @@ func BuildHTTPRouter(cfg config.Config) (*gin.Engine, func(), error) {
 	datasetService := service.NewDatasetService(repo)
 	modelService := service.NewModelService(repo)
 	analyticsService := service.NewAnalyticsService(repo)
+	authService := service.NewAuthService(repo, cfg.JWTSecret)
 
 	h := handler.New(
 		detectionService,
@@ -46,6 +47,7 @@ func BuildHTTPRouter(cfg config.Config) (*gin.Engine, func(), error) {
 		datasetService,
 		modelService,
 		analyticsService,
+		authService,
 		db,
 	)
 

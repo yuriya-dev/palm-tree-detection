@@ -21,6 +21,7 @@ type Handler struct {
 	datasetService   *service.DatasetService
 	modelService     *service.ModelService
 	analyticsService *service.AnalyticsService
+	authService      *service.AuthService
 	db               *sql.DB
 }
 
@@ -30,6 +31,7 @@ func New(
 	datasetService *service.DatasetService,
 	modelService *service.ModelService,
 	analyticsService *service.AnalyticsService,
+	authService *service.AuthService,
 	db *sql.DB,
 ) *Handler {
 	return &Handler{
@@ -38,6 +40,7 @@ func New(
 		datasetService:   datasetService,
 		modelService:     modelService,
 		analyticsService: analyticsService,
+		authService:      authService,
 		db:               db,
 	}
 }

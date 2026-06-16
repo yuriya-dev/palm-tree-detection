@@ -1,7 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Leaf, Loader2, Lock, Mail } from 'lucide-react'
+import { apiEndpoints } from '../services/api'
+import { useAuthStore } from '../store/useAuthStore'
 
 export default function Login() {
+  const navigate = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
+
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [form, setForm] = useState({ email: '', password: '' })
@@ -19,10 +25,19 @@ export default function Login() {
       return
     }
     setIsLoading(true)
-    // TODO: integrate with auth service
-    await new Promise((r) => setTimeout(r, 1500))
-    setIsLoading(false)
-    setError('Email atau password tidak valid.')
+    setError('')
+    try {
+      const res = await apiEndpoints.login({ email: form.email, password: form.password })
+      // res is already unwrapped to res.data by the axios interceptor
+      const { token, user } = res.data ?? res
+      setAuth(token, user)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      const msg = err?.message || 'Email atau password tidak valid.'
+      setError(msg)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

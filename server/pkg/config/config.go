@@ -15,6 +15,7 @@ type Config struct {
 	DBName         string
 	DBSSLMode      string
 	MLServiceURL   string
+	JWTSecret      string
 }
 
 func Load() Config {
@@ -28,6 +29,7 @@ func Load() Config {
 		DBName:         getEnv("DB_NAME", "postgres"),
 		DBSSLMode:      getEnv("DB_SSLMODE", "disable"),
 		MLServiceURL:   getEnv("ML_SERVICE_URL", "http://localhost:8000"),
+		JWTSecret:      getEnv("JWT_SECRET", "change-me-in-production"),
 	}
 }
 

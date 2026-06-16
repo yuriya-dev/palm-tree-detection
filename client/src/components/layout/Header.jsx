@@ -1,14 +1,19 @@
 import { CalendarDays, Menu, Upload } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Button from '../ui/Button'
+import { useAuthStore } from '../../store/useAuthStore'
 
 export default function Header({ title, subtitle, onOpenSidebar }) {
+  const user = useAuthStore((s) => s.user)
+
   const dateLabel = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   }).format(new Date())
+
+  const greeting = user?.name ? `Selamat datang, ${user.name.split(' ')[0]}` : 'Selamat datang kembali'
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur-sm">
@@ -25,7 +30,7 @@ export default function Header({ title, subtitle, onOpenSidebar }) {
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-              Selamat datang kembali
+              {greeting}
             </p>
             <h1 className="font-display text-2xl text-slate-900 sm:text-3xl">{title}</h1>
             <p className="text-sm text-slate-500">{subtitle}</p>

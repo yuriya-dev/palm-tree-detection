@@ -5,10 +5,13 @@ import {
   Database,
   Gauge,
   Leaf,
+  LogOut,
   Radar,
   Settings,
+  UserCircle2,
 } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../store/useAuthStore'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: Gauge },
@@ -21,6 +24,15 @@ const navItems = [
 ]
 
 export default function Sidebar({ isOpen, onClose }) {
+  const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <>
       <div
@@ -37,6 +49,7 @@ export default function Sidebar({ isOpen, onClose }) {
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
+        {/* Brand */}
         <div className="mb-6 flex items-center gap-3 px-2">
           <div className="rounded-xl bg-gradient-to-br from-primary-900 to-primary-700 p-2 text-white shadow-sm">
             <Leaf size={16} />
@@ -47,6 +60,7 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
+        {/* Nav */}
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
@@ -69,9 +83,30 @@ export default function Sidebar({ isOpen, onClose }) {
           })}
         </nav>
 
-        <div className="mt-auto rounded-lg bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">System Health</p>
-          <p className="mt-1 text-sm font-medium text-emerald-700">All services operational</p>
+        {/* Footer: user info + logout */}
+        <div className="mt-auto space-y-2">
+          {/* Logged-in user */}
+          {user && (
+            <div className="flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-2.5">
+              <UserCircle2 size={28} className="shrink-0 text-slate-400" />
+              <div className="min-w-0">
+                <p className="truncate text-[0.78rem] font-semibold text-slate-700">
+                  {user.name || user.email}
+                </p>
+                <p className="truncate text-[0.68rem] capitalize text-slate-400">{user.role}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Logout */}
+          <button
+            id="sidebar-logout"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-button px-3 py-2.5 text-sm text-red-500 transition-all duration-200 hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut size={16} />
+            <span>Keluar</span>
+          </button>
         </div>
       </aside>
     </>

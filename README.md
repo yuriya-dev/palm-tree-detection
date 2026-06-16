@@ -1,5 +1,9 @@
 # Palm Tree Detection Fullstack Project
 
+Large-scale oil palm plantation monitoring in Indonesia is still highly manual and fragmented — field teams struggle to track the health of thousands of trees across multiple sites without a unified system. This project addresses that gap by building **NYAWIT**, a fullstack AI-powered platform that uses UAV imagery to automatically detect and classify the health condition of oil palm trees in real time.
+
+The platform is built across three integrated layers: a YOLOv8 detection model (trained on the MOPAD dataset) served via a FastAPI microservice, a Go/Gin REST API secured with JWT authentication and bcrypt password hashing, and a React dashboard featuring drone image upload, an interactive monitoring map, dataset and model management, and analytics. The frontend persists auth tokens via Zustand and attaches them automatically to every request through an Axios interceptor, enabling a seamless and secure user experience from login to real-time inference.
+
 Platform fullstack untuk deteksi dan monitoring kondisi pohon sawit berbasis citra UAV.
 Project ini menggabungkan:
 
@@ -33,6 +37,12 @@ Fitur halaman utama:
 - Auto migration tabel saat server startup
 
 Endpoint yang tersedia:
+
+**Auth (publik)**
+- POST /api/v1/auth/login
+- GET  /api/v1/auth/me _(butuh token)_
+
+**Protected (wajib Bearer token)**
 - POST /api/v1/detect
 - GET /api/v1/detections
 - GET /api/v1/detections/:id
@@ -55,6 +65,18 @@ Endpoint yang tersedia:
 - Weight model dapat ditaruh di:
   - ml-service/models/best.pt
 - Jika weight tidak tersedia, service tetap berjalan dengan fallback heuristik
+
+## Kredensial Default
+
+Akun admin bawaan dibuat otomatis saat server pertama kali dijalankan (seed):
+
+| Field    | Value               |
+|----------|---------------------|
+| Email    | `admin@nyawit.id`   |
+| Password | `nyawit2026`        |
+| Role     | `admin`             |
+
+> **Catatan:** Akun ini hanya dibuat jika tabel `users` masih kosong. Jika ingin mereset, hapus baris pada tabel `users` lalu restart server.
 
 ## Catatan Integrasi Saat Ini
 
@@ -168,4 +190,3 @@ Untuk dataset, project ini mengambil referensi dari:
 - https://github.com/rs-dl/MOPAD
 
 Jika Anda menggunakan pipeline ML ini untuk kebutuhan riset/publikasi, mohon sertakan sitasi ke paper MOPAD yang relevan.
-

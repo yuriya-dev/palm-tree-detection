@@ -750,7 +750,40 @@ func countQueryForTable(table string) (string, error) {
 		return "SELECT COUNT(*) FROM datasets", nil
 	case "models":
 		return "SELECT COUNT(*) FROM models", nil
+	case "users":
+		return "SELECT COUNT(*) FROM users", nil
 	default:
 		return "", fmt.Errorf("unsupported table: %s", table)
 	}
+}
+
+// GetUserByEmail fetches a user by email (returns sql.ErrNoRows if not found).
+func (r *PostgresRepository) GetUserByEmail(ctx context.Context, email string) (domain.User, error) {
+	var u domain.User
+	err := r.db.QueryRowContext(
+		ctx,
+		`SELECT id, name, email, password, role, created_at, updated_at
+		 FROM users
+		 WHERE email = $1`,
+		email,
+	).Scan(&u.ID, &u.Name, &u.Email, &u.Password, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return u, nil
+}
+
+// CreateUser inserts a new user row.
+func (r *PostgresRepository) CreateUser(ctx context.Context, u domain.User) error {
+	_, err := r.db.ExecContext(
+		ctx,
+		`INSERT INTO users (name, email, password, role)
+		 VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (email) DO NOTHING`,
+		u.Name,
+		u.Email,
+		u.Password,
+		u.Role,
+	)
+	return err
 }

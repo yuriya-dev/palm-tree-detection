@@ -9,6 +9,14 @@ import Login from './pages/Login'
 import Models from './pages/Models'
 import Monitoring from './pages/Monitoring'
 import Settings from './pages/Settings'
+import { useAuthStore } from './store/useAuthStore'
+
+/** Redirects unauthenticated users to /login */
+function ProtectedRoute({ children }) {
+  const token = useAuthStore((s) => s.token)
+  if (!token) return <Navigate to="/login" replace />
+  return children
+}
 
 function App() {
   return (
@@ -18,7 +26,14 @@ function App() {
           {/* Full-screen login — no sidebar/header */}
           <Route path="/login" element={<Login />} />
 
-          <Route element={<Layout />}>
+          {/* All other routes require auth */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/detection" element={<Detection />} />
@@ -28,6 +43,9 @@ function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
