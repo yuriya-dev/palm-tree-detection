@@ -94,3 +94,6 @@ dataset/
 AI_Summary/
 
 models/best.pt
+
+bin_old/
+bin/

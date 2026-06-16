@@ -163,10 +163,9 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 
 ## Referensi ML
 
-Untuk modul machine learning, project ini mengambil referensi dari:
+Untuk dataset, project ini mengambil referensi dari:
 
 - https://github.com/rs-dl/MOPAD
 
-Terima kasih kepada penulis/original author MOPAD atas riset dan implementasi dasarnya.
 Jika Anda menggunakan pipeline ML ini untuk kebutuhan riset/publikasi, mohon sertakan sitasi ke paper MOPAD yang relevan.
 
