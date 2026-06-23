@@ -124,6 +124,16 @@ export ML_SERVICE_URL=http://localhost:8000
 
 ### 2) Jalankan Python ML Service
 
+**macOS / Linux (Macbook):**
+```bash
+cd ml-service
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+**Windows:**
 ```bash
 cd ml-service
 python -m venv .venv
@@ -177,6 +187,14 @@ cd notebook
 
 ### 6) Jalankan Inference ML (opsional)
 
+**macOS / Linux (Macbook):**
+```bash
+cd ml-service
+export MODEL_PATH=/path/to/best.pt
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+**Windows:**
 ```bash
 cd ml-service
 set MODEL_PATH=D:\path\to\best.pt
