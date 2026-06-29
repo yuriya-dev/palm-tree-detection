@@ -59,8 +59,8 @@ export default function Login() {
         <div className="relative z-10 flex w-full flex-col justify-between p-10">
           {/* Brand */}
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-900 to-primary-500 text-white shadow-lg">
-              <Leaf size={18} />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-white shadow-lg">
+              <img className="h-8 w-auto object-contain" src="logo.svg" alt="logo" />
             </div>
             <div>
               <p className="text-sm font-extrabold tracking-widest text-white">NYAWIT</p>
@@ -108,7 +108,7 @@ export default function Login() {
           {/* Header */}
           <div className="mb-8">
             <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-900 to-primary-500 text-white shadow-[0_6px_20px_rgba(26,122,74,0.30)]">
-              <Leaf size={22} />
+              <img className="h-8 w-auto object-contain" src="logo2.svg" alt="logo" />
             </div>
             <h2 className="text-[1.65rem] font-extrabold leading-tight text-slate-900">
               Selamat Datang Kembali

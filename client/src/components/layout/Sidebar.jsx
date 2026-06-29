@@ -50,14 +50,9 @@ export default function Sidebar({ isOpen, onClose }) {
         )}
       >
         {/* Brand */}
-        <div className="mb-6 flex items-center gap-3 px-2">
-          <div className="rounded-xl bg-gradient-to-br from-primary-900 to-primary-700 p-2 text-white shadow-sm">
-            <Leaf size={16} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">NYAWIT</p>
+        <div className="mb-6 flex flex-col items-start gap-2 px-2">
+            <img className="h-12 w-auto object-contain" src="logo.svg" alt="logo" />
             <p className="text-xs text-slate-500">Oil Palm Intelligence</p>
-          </div>
         </div>
 
         {/* Nav */}

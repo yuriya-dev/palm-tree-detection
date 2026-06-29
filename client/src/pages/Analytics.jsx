@@ -13,6 +13,7 @@ import {
 import TrendLine from '../components/charts/TrendLine'
 import EmptyState from '../components/shared/EmptyState'
 import Skeleton, { StatGridSkeleton } from '../components/shared/Skeleton'
+import { toast } from '../components/shared/ToastProvider'
 import Button from '../components/ui/Button'
 import StatCard from '../components/ui/StatCard'
 import { apiEndpoints } from '../services/api'
@@ -166,6 +167,170 @@ export default function Analytics() {
     ]
   }, [overview, trendDelta])
 
+  const handleExportCSV = useCallback(() => {
+    try {
+      const rows = [
+        ['Palm Tree Detection Analytics Report'],
+        ['Periode', `${startDate} s/d ${endDate}`],
+        ['Tanggal Dibuat', new Date().toLocaleString('id-ID')],
+        [],
+        ['Ringkasan KPI'],
+        ['Metric', 'Nilai'],
+        ...analyticsKpis.map((kpi) => [kpi.title, kpi.value]),
+        [],
+        ['Weekly Detection Trend'],
+        ['Minggu', 'Jumlah Deteksi'],
+        ...weeklyTrend.map((t) => [t.week, t.detections]),
+        [],
+        ['Site Comparison'],
+        ['Site', 'Jumlah Pohon'],
+        ...siteComparison.map((s) => [s.site, s.trees]),
+      ]
+
+      const csvContent =
+        'data:text/csv;charset=utf-8,\uFEFF' +
+        rows.map((e) => e.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',')).join('\n')
+
+      const encodedUri = encodeURI(csvContent)
+      const link = document.createElement('a')
+      link.setAttribute('href', encodedUri)
+      link.setAttribute('download', `analytics-report-${startDate}-to-${endDate}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success('Laporan CSV berhasil diunduh.')
+    } catch (err) {
+      toast.error('Gagal mengekspor data CSV.')
+    }
+  }, [analyticsKpis, weeklyTrend, siteComparison, startDate, endDate])
+
+  const handleExportPDF = useCallback(() => {
+    try {
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        toast.error('Pop-up terblokir oleh browser. Izinkan pop-up untuk mengekspor PDF.')
+        return
+      }
+
+      const kpiRows = analyticsKpis
+        .map(
+          (kpi) => `
+            <div style="flex: 1; min-width: 140px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
+              <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">${kpi.title}</div>
+              <div style="font-size: 24px; font-weight: 700; color: #0f172a; margin-top: 4px;">${kpi.value}</div>
+            </div>
+          `,
+        )
+        .join('')
+
+      const trendRows = weeklyTrend
+        .map(
+          (t) => `
+            <tr>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">${t.week}</td>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${t.detections}</td>
+            </tr>
+          `,
+        )
+        .join('')
+
+      const siteRows = siteComparison
+        .map(
+          (s) => `
+            <tr>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">${s.site}</td>
+              <td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${s.trees}</td>
+            </tr>
+          `,
+        )
+        .join('')
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Analytics Report - ${startDate} s/d ${endDate}</title>
+            <style>
+              body { font-family: 'Segoe UI', system-ui, sans-serif; color: #0f172a; padding: 24px; max-width: 800px; margin: 0 auto; }
+              h1 { color: #1a7a4a; margin-bottom: 4px; font-size: 24px; }
+              .subtitle { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+              .section-title { font-size: 16px; font-weight: 700; margin-top: 24px; margin-bottom: 12px; color: #1e293b; border-bottom: 2px solid #1a7a4a; padding-bottom: 4px; }
+              .kpi-container { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+              th { background: #f1f5f9; text-align: left; padding: 10px 12px; font-weight: 600; color: #475569; border-bottom: 2px solid #cbd5e1; }
+              th.right, td.right { text-align: right; }
+              .footer { margin-top: 40px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+              @media print {
+                body { padding: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Palm Tree Detection - Laporan Analisis</h1>
+            <div class="subtitle">Periode: <strong>${startDate}</strong> sampai <strong>${endDate}</strong> | Dicetak pada: ${new Date().toLocaleString('id-ID')}</div>
+
+            <div class="section-title">Ringkasan Performa (KPI)</div>
+            <div class="kpi-container">
+              ${kpiRows}
+            </div>
+
+            <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-top: 20px;">
+              <div style="flex: 1; min-width: 300px;">
+                <div class="section-title">Tren Deteksi Mingguan</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Minggu</th>
+                      <th class="right">Total Deteksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${trendRows}
+                  </tbody>
+                </table>
+              </div>
+              <div style="flex: 1; min-width: 300px;">
+                <div class="section-title">Perbandingan per Lokasi (Site)</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Lokasi (Site)</th>
+                      <th class="right">Jumlah Pohon</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${siteRows}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="footer">
+              Laporan otomatis didapatkan dari Sistem Monitoring & Deteksi Kelapa Sawit.
+            </div>
+
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                }, 300);
+              };
+            </script>
+          </body>
+        </html>
+      `
+
+      printWindow.document.open()
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
+
+      toast.success('Window cetak / simpan PDF telah dibuka.')
+    } catch (err) {
+      toast.error('Gagal menyiapkan cetak PDF.')
+    }
+  }, [analyticsKpis, weeklyTrend, siteComparison, startDate, endDate])
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -235,11 +400,11 @@ export default function Analytics() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={handleExportPDF}>
             <Download size={15} />
             Export PDF
           </Button>
-          <Button variant="ghost">
+          <Button variant="ghost" onClick={handleExportCSV}>
             <FileSpreadsheet size={15} />
             Export CSV
           </Button>
