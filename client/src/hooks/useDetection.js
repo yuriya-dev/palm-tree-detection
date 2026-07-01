@@ -123,21 +123,36 @@ export default function useDetection() {
         // Check if it's a pending request (HTTP 202)
         if (response?.data?.status === 'pending') {
           console.log('[Detection] Request is pending approval')
+          
+          let prediction = {}
+          try {
+            if (response.data.prediction_data) {
+              prediction = JSON.parse(response.data.prediction_data)
+            }
+          } catch (e) {
+            console.error('Failed to parse prediction_data:', e)
+          }
+
+          const uiDetections = mapPredictionBoxes(prediction, response.data, confidenceThreshold)
+          const status = normalizeStatus(prediction?.status || response.data?.status)
         
-          // Create a preview result for the pending request
+          // Create a preview result for the pending request with detections
           const previewResult = {
+            id: response.data.id,
             imageUrl,
             selectedModel: selectedModelLabel,
             confidenceThreshold,
             status: 'pending',
-            detections: [],
-            count: 0,
-            breakdown: [],
+            prediction,
+            detection: response.data,
+            detections: uiDetections,
+            count: uiDetections.length,
+            breakdown: buildBreakdown(uiDetections),
             processedAt: new Date().toISOString(),
           }
         
           setResult(previewResult)
-          return { status: 'pending', data: response.data }
+          return { status: 'pending', data: response.data, result: previewResult }
         }
 
       const rawData = response?.data || response || {}

@@ -97,3 +97,5 @@ models/best.pt
 
 bin_old/
 bin/
+geotiff/
+doc/

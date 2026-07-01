@@ -94,7 +94,7 @@ export default function Detection() {
       await runDetection({
         file,
         imageUrl: previewUrl,
-        skipApproval: true,
+        skipApproval: false,
         modelMeta: primaryActiveModel,
       })
       toast.success('Deteksi selesai. Silakan review hasilnya.')
@@ -105,12 +105,20 @@ export default function Detection() {
   }
 
   const handleApprove = async () => {
-    if (!result) return
+    const requestId = result?.id ?? result?.detection?.id
+    if (!requestId) {
+      toast.error('Tidak ada request deteksi untuk disetujui')
+      return
+    }
 
     setIsReviewing(true)
     try {
-      toast.success('Hasil deteksi disetujui')
-      handleReset()
+      await apiEndpoints.reviewDetectionRequest(requestId, { action: 'approve' })
+      toast.success('Hasil deteksi disetujui, titik pohon ditambahkan ke peta!')
+      setReviewDecision('approved')
+      setTimeout(() => {
+        handleReset()
+      }, 1500)
     } catch (error) {
       console.error('Failed to approve detection:', error)
       toast.error(error.message || 'Failed to approve detection')
@@ -120,18 +128,20 @@ export default function Detection() {
   }
 
   const handleReject = async () => {
-    const detectionId = result?.detection?.id ?? result?.id ?? result?.detection_id
-    if (!detectionId) {
-      toast.error('Tidak ada hasil deteksi yang bisa ditolak')
+    const requestId = result?.id ?? result?.detection?.id
+    if (!requestId) {
+      toast.error('Tidak ada request deteksi untuk ditolak')
       return
     }
 
     setIsReviewing(true)
     try {
-      await apiEndpoints.deleteDetection(detectionId)
-
-      toast.success('Hasil deteksi ditolak dan dihapus')
-      handleReset()
+      await apiEndpoints.reviewDetectionRequest(requestId, { action: 'reject' })
+      toast.success('Hasil deteksi ditolak dan dibatalkan')
+      setReviewDecision('rejected')
+      setTimeout(() => {
+        handleReset()
+      }, 1500)
     } catch (error) {
       console.error('Failed to reject detection:', error)
       toast.error(error.message || 'Failed to reject detection')

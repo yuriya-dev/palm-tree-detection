@@ -233,6 +233,18 @@ func (s *DetectionService) runDetectionInternal(ctx context.Context, req Detecti
 				boxConfidence = clampConfidence(box.Confidence)
 			}
 
+			// Calculate center coordinates of bounding box
+			cx := 0.0
+			cy := 0.0
+			if box.Box != nil {
+				x1 := box.Box["x1"]
+				y1 := box.Box["y1"]
+				x2 := box.Box["x2"]
+				y2 := box.Box["y2"]
+				cx = (x1 + x2) / 2.0
+				cy = (y1 + y2) / 2.0
+			}
+
 			detection := domain.Detection{
 				ID:         detectionID,
 				TreeID:     treeID,
@@ -246,8 +258,8 @@ func (s *DetectionService) runDetectionInternal(ctx context.Context, req Detecti
 			tree := domain.Tree{
 				ID:         treeID,
 				Site:       site,
-				Lat:        -2.24 - float64(treeNum)*0.0011,
-				Lng:        113.89 + float64(treeNum)*0.0014,
+				Lng:        104.0 + (cx * 0.00001),
+				Lat:        -3.0 - (cy * 0.00001),
 				Status:     boxStatus,
 				Confidence: detection.Confidence,
 				DetectedAt: now.Format("2006-01-02"),
@@ -278,11 +290,22 @@ func (s *DetectionService) runDetectionInternal(ctx context.Context, req Detecti
 		CreatedAt:  now.Format(time.RFC3339),
 	}
 
+	cx := 1000.0
+	cy := 1000.0
+	if prediction.ImageSize != nil {
+		if w, ok := prediction.ImageSize["width"]; ok && w > 0 {
+			cx = float64(w) / 2.0
+		}
+		if h, ok := prediction.ImageSize["height"]; ok && h > 0 {
+			cy = float64(h) / 2.0
+		}
+	}
+
 	tree := domain.Tree{
 		ID:         treeID,
 		Site:       site,
-		Lat:        -2.24 - float64(maxTreeID)*0.0011,
-		Lng:        113.89 + float64(maxTreeID)*0.0014,
+		Lng:        104.0 + (cx * 0.00001),
+		Lat:        -3.0 - (cy * 0.00001),
 		Status:     status,
 		Confidence: detection.Confidence,
 		DetectedAt: now.Format("2006-01-02"),

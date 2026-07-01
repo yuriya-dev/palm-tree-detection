@@ -33,7 +33,7 @@ export default function useTrees(filters) {
       try {
         const response = await apiEndpoints.listTrees({
           page: 1,
-          limit: 100,
+          limit: 10000,
           site: appliedFilters.site === 'all' ? undefined : appliedFilters.site,
           status: appliedFilters.status === 'all' ? undefined : appliedFilters.status,
         })

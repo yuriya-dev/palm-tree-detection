@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Helmet } from 'react-helmet-async'
 import SiteMap from '../components/maps/SiteMap'
 import EmptyState from '../components/shared/EmptyState'
@@ -16,6 +16,14 @@ const defaultFilters = {
 export default function Monitoring() {
   const [filters, setFilters] = useState(defaultFilters)
   const { trees, loading, error, isEmpty } = useTrees(filters)
+
+  const stats = useMemo(() => {
+    const total = trees.length
+    const healthy = trees.filter((t) => t.status === 'Healthy').length
+    const warning = trees.filter((t) => t.status === 'Warning').length
+    const critical = trees.filter((t) => t.status === 'Critical').length
+    return { total, healthy, warning, critical }
+  }, [trees])
 
   const pageHelmet = (
     <Helmet>
@@ -98,12 +106,67 @@ export default function Monitoring() {
         />
       ) : (
         <>
-          <section className="card p-5">
-            <div className="mb-4">
-              <h3 className="font-display text-2xl text-slate-900">Interactive Tree Map</h3>
-              <p className="text-sm text-slate-500">Klik marker untuk melihat detail pohon.</p>
+          <section className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
+            {/* Map Card */}
+            <div className="card flex flex-col p-5 h-full min-h-[500px]">
+              <div className="mb-4">
+                <h3 className="font-display text-2xl text-slate-900">Interactive Tree Map</h3>
+                <p className="text-sm text-slate-500">Klik marker untuk melihat detail pohon. Klik ikon pojok kanan atas untuk memperbesar peta.</p>
+              </div>
+              <div className="relative flex-1 rounded-xl overflow-hidden border border-slate-100">
+                <SiteMap markers={trees} height={420} zoom={16} interactive />
+              </div>
             </div>
-            <SiteMap markers={trees} height={460} zoom={16} interactive />
+
+            {/* Quick Stats Sidebar Card */}
+            <div className="flex flex-col gap-6">
+              <div className="card p-5">
+                <h4 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4">Health Distribution</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-100/60 p-4 text-center">
+                    <p className="text-xs font-semibold text-emerald-600 uppercase">Healthy</p>
+                    <p className="mt-2 text-3xl font-display text-emerald-900">{stats.healthy}</p>
+                    <p className="text-[10px] text-emerald-500 mt-1">{(stats.healthy / (stats.total || 1) * 100).toFixed(0)}% of total</p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50/70 border border-amber-100/60 p-4 text-center">
+                    <p className="text-xs font-semibold text-amber-600 uppercase">Warning</p>
+                    <p className="mt-2 text-3xl font-display text-amber-900">{stats.warning}</p>
+                    <p className="text-[10px] text-amber-500 mt-1">{(stats.warning / (stats.total || 1) * 100).toFixed(0)}% of total</p>
+                  </div>
+                  <div className="rounded-xl bg-rose-50/70 border border-rose-100/60 p-4 text-center">
+                    <p className="text-xs font-semibold text-rose-600 uppercase">Critical</p>
+                    <p className="mt-2 text-3xl font-display text-rose-900">{stats.critical}</p>
+                    <p className="text-[10px] text-rose-500 mt-1">{(stats.critical / (stats.total || 1) * 100).toFixed(0)}% of total</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-center">
+                    <p className="text-xs font-semibold text-slate-600 uppercase">Total Trees</p>
+                    <p className="mt-2 text-3xl font-display text-slate-900">{stats.total}</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Registered</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card flex-1 p-5 max-h-[300px] overflow-y-auto">
+                <h4 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-3">Critical Tree List</h4>
+                {trees.filter(t => t.status === 'Critical').length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-10">No critical trees in this filtered view.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {trees.filter(t => t.status === 'Critical').slice(0, 5).map(tree => (
+                      <div key={tree.id} className="flex items-center justify-between rounded-lg bg-rose-50/50 border border-rose-100/40 px-3 py-2 text-xs">
+                        <div>
+                          <p className="font-semibold text-rose-900">{tree.id}</p>
+                          <p className="text-[10px] text-slate-500">{tree.lat.toFixed(5)}, {tree.lng.toFixed(5)}</p>
+                        </div>
+                        <span className="rounded-full bg-rose-100 px-2 py-0.5 font-medium text-rose-800">
+                          Critical
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
 
           <section>
