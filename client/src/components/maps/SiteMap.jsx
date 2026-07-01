@@ -1,23 +1,51 @@
-import { useState } from 'react'
-import { MapContainer, TileLayer } from 'react-leaflet'
+import { useState, useEffect } from 'react'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import TreeMarker from './TreeMarker'
 
 const defaultCenter = [-3.0, 104.0]
 
+function MapRecenter({ center, zoom, isFullscreen }) {
+  const map = useMap()
+  
+  useEffect(() => {
+    if (center) {
+      map.setView(center, zoom)
+    }
+  }, [center, zoom, map])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [isFullscreen, map])
+
+  return null
+}
+
 export default function SiteMap({
   markers,
   height = 320,
   zoom = 12,
+  center: customCenter,
+  selectedTreeId,
+  onSelectTree,
+  isFullscreen: customFullscreen,
+  onToggleFullscreen,
   interactive = true,
 }) {
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [internalFullscreen, setInternalFullscreen] = useState(false)
+  const isFullscreen = customFullscreen ?? internalFullscreen
 
-  const center =
-    markers.length > 0 ? [markers[0].lat, markers[0].lng] : defaultCenter
+  const center = customCenter || (markers.length > 0 ? [markers[0].lat, markers[0].lng] : defaultCenter)
 
   const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
+    if (onToggleFullscreen) {
+      onToggleFullscreen()
+    } else {
+      setInternalFullscreen(!internalFullscreen)
+    }
   }
 
   const containerClasses = isFullscreen
@@ -31,7 +59,6 @@ export default function SiteMap({
   return (
     <div className={containerClasses} style={containerStyle}>
       <MapContainer
-        key={isFullscreen ? 'fullscreen' : 'normal'}
         center={center}
         zoom={zoom}
         className="h-full w-full"
@@ -41,6 +68,7 @@ export default function SiteMap({
         zoomControl={interactive}
         attributionControl={false}
       >
+        <MapRecenter center={center} zoom={zoom} isFullscreen={isFullscreen} />
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
           attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
@@ -52,7 +80,12 @@ export default function SiteMap({
           minZoom={12}
         />
         {markers.map((marker) => (
-          <TreeMarker key={marker.id} tree={marker} />
+          <TreeMarker 
+            key={marker.id} 
+            tree={marker} 
+            isSelected={selectedTreeId === marker.id}
+            onClick={() => onSelectTree && onSelectTree(marker)}
+          />
         ))}
       </MapContainer>
 

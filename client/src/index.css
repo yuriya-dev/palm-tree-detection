@@ -98,3 +98,26 @@
 #root {
   min-height: 100vh;
 }
+
+/* Custom Leaflet Pulse/Blink Animation */
+@keyframes leaflet-blink-anim {
+  0% {
+    stroke-width: 2px;
+    stroke-opacity: 1;
+    fill-opacity: 0.95;
+  }
+  100% {
+    stroke-width: 32px; /* Gelombang keluar yang besar */
+    stroke-opacity: 0;   /* Memudar di tepi luar */
+    fill-opacity: 0.6;
+  }
+}
+
+.leaflet-blink {
+  animation: leaflet-blink-anim 1.2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+}
+
+.no-transform {
+  transform: none !important;
+  transition: none !important;
+}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import SiteMap from '../components/maps/SiteMap'
 import EmptyState from '../components/shared/EmptyState'
@@ -16,6 +16,27 @@ const defaultFilters = {
 export default function Monitoring() {
   const [filters, setFilters] = useState(defaultFilters)
   const { trees, loading, error, isEmpty } = useTrees(filters)
+  const [mapCenter, setMapCenter] = useState(null)
+  const [mapZoom, setMapZoom] = useState(16)
+  const [selectedTreeId, setSelectedTreeId] = useState(null)
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false)
+
+  useEffect(() => {
+    if (isMapFullscreen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMapFullscreen])
+
+  const handleViewTree = (tree) => {
+    setMapCenter([tree.lat, tree.lng])
+    setMapZoom(18) // Zoom in closely when focusing on a tree
+    setSelectedTreeId(tree.id)
+  }
 
   const stats = useMemo(() => {
     const total = trees.length
@@ -108,13 +129,23 @@ export default function Monitoring() {
         <>
           <section className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
             {/* Map Card */}
-            <div className="card flex flex-col p-5 h-full min-h-[500px]">
+            <div className={`flex flex-col p-5 h-full min-h-[500px] ${isMapFullscreen ? 'no-transform' : 'card'}`}>
               <div className="mb-4">
                 <h3 className="font-display text-2xl text-slate-900">Interactive Tree Map</h3>
                 <p className="text-sm text-slate-500">Klik marker untuk melihat detail pohon. Klik ikon pojok kanan atas untuk memperbesar peta.</p>
               </div>
-              <div className="relative flex-1 rounded-xl overflow-hidden border border-slate-100">
-                <SiteMap markers={trees} height={420} zoom={16} interactive />
+              <div className="relative flex-1 rounded-xl overflow-hidden border border-slate-100 min-h-[380px]">
+                <SiteMap 
+                  markers={trees} 
+                  height="100%" 
+                  zoom={mapZoom} 
+                  center={mapCenter} 
+                  selectedTreeId={selectedTreeId}
+                  onSelectTree={handleViewTree}
+                  isFullscreen={isMapFullscreen}
+                  onToggleFullscreen={() => setIsMapFullscreen(!isMapFullscreen)}
+                  interactive 
+                />
               </div>
             </div>
 
@@ -153,15 +184,20 @@ export default function Monitoring() {
                 ) : (
                   <div className="space-y-2">
                     {trees.filter(t => t.status === 'Critical').slice(0, 5).map(tree => (
-                      <div key={tree.id} className="flex items-center justify-between rounded-lg bg-rose-50/50 border border-rose-100/40 px-3 py-2 text-xs">
-                        <div>
+                      <button
+                        key={tree.id}
+                        onClick={() => handleViewTree(tree)}
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-lg bg-rose-50/50 border border-rose-100/40 px-3 py-2 text-xs transition hover:bg-rose-100/45 hover:border-rose-200"
+                      >
+                        <div className="text-left">
                           <p className="font-semibold text-rose-900">{tree.id}</p>
                           <p className="text-[10px] text-slate-500">{tree.lat.toFixed(5)}, {tree.lng.toFixed(5)}</p>
                         </div>
                         <span className="rounded-full bg-rose-100 px-2 py-0.5 font-medium text-rose-800">
                           Critical
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -170,7 +206,7 @@ export default function Monitoring() {
           </section>
 
           <section>
-            <TreeTable trees={trees} pageSize={10} />
+            <TreeTable trees={trees} pageSize={10} onViewTree={handleViewTree} />
           </section>
         </>
       )}

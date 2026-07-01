@@ -231,7 +231,7 @@ export default function Dashboard() {
             <h3 className="font-display text-2xl text-slate-900">Site Map Preview</h3>
             <p className="text-sm text-slate-500">Minimap lokasi pengamatan dan status site.</p>
           </div>
-          <SiteMap markers={sitePreviewMarkers} height={288} zoom={12} interactive={false} />
+          <SiteMap markers={sitePreviewMarkers} height={288} zoom={12} interactive={true} />
         </div>
       </section>
 

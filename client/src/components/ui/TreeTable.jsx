@@ -13,7 +13,7 @@ const compareValues = (a, b) => {
   return String(a).localeCompare(String(b))
 }
 
-export default function TreeTable({ trees, pageSize = 8 }) {
+export default function TreeTable({ trees, pageSize = 8, onViewTree }) {
   const [sortBy, setSortBy] = useState('detectedAt')
   const [sortDirection, setSortDirection] = useState('desc')
   const [page, setPage] = useState(1)
@@ -105,7 +105,11 @@ export default function TreeTable({ trees, pageSize = 8 }) {
                 <td className="px-4 py-3">{(tree.confidence * 100).toFixed(1)}%</td>
                 <td className="px-4 py-3">{tree.detectedAt}</td>
                 <td className="px-4 py-3 text-right">
-                  <button className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-200">
+                  <button 
+                    onClick={() => onViewTree && onViewTree(tree)}
+                    type="button"
+                    className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-all duration-200 hover:bg-slate-200"
+                  >
                     View
                   </button>
                 </td>

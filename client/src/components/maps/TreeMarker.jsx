@@ -7,18 +7,24 @@ const markerColorMap = {
   Critical: '#dc2626',
 }
 
-export default function TreeMarker({ tree }) {
+export default function TreeMarker({ tree, isSelected, onClick }) {
   const markerColor = markerColorMap[tree.status] || '#0284c7'
 
   return (
     <CircleMarker
       center={[tree.lat, tree.lng]}
-      radius={8}
+      radius={isSelected ? 13 : 8}
+      eventHandlers={{
+        click: () => {
+          if (onClick) onClick()
+        }
+      }}
       pathOptions={{
         color: markerColor,
         fillColor: markerColor,
-        fillOpacity: 0.82,
-        weight: 2,
+        fillOpacity: isSelected ? 0.95 : 0.82,
+        weight: isSelected ? 3 : 2,
+        className: isSelected ? 'leaflet-blink' : ''
       }}
     >
       <Popup>
